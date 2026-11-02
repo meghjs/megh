@@ -12,15 +12,24 @@ import type {
   Transaction,
 } from "kysely";
 import { NotFoundException } from "../common/exceptions";
+import type { PageRequest, Paginated } from "../collection/pagination";
 import { getConnection, runInTransaction, setConnection } from "./connection";
 import type { Cast } from "./casts";
+import { HasRelation } from "./has-relation";
 import { PivotRelation } from "./pivot";
 import {
   ModelQuery,
   assertSoftDeletes,
   type ComparisonOperator,
+  type Counted,
+  type CursorPageRequest,
+  type CursorPaginated,
+  type ModelAt,
+  type RelationConstraint,
+  type Scope,
+  type SimplePaginated,
 } from "./query";
-import { getRelation, isRelationMarker } from "./relations";
+import { RELATION, getRelation, isRelationMarker } from "./relations";
 import {
   changedValues,
   columnValues,
@@ -35,12 +44,15 @@ import {
 } from "./state";
 import type {
   BelongsToManyKeys,
+  ColumnKeys,
   Columns,
   CreateInput,
+  HasRelationKeys,
   ModelClass,
   PivotOf,
   PrimaryKeyValue,
   RelatedModel,
+  RelationKeys,
   RelationPaths,
   Row,
   UpdateInput,
@@ -126,10 +138,11 @@ export abstract class Model {
   /**
    * Run `fn` in a transaction that every model query inside it uses, however
    * deep in the call chain. Commits when `fn` resolves, rolls back if it
-   * throws. Nested calls join the outer transaction.
+   * throws. A nested call runs in a savepoint: if it throws, only its own
+   * work is rolled back (and the error still propagates).
    */
   static transaction<T>(fn: (trx: Transaction<any>) => Promise<T>): Promise<T> {
-    return runInTransaction(fn);
+    return runInTransaction(fn, { savepoint: true });
   }
 
   // ── Queries ─────────────────────────────────────────────────────────────
@@ -170,6 +183,53 @@ export abstract class Model {
     return new ModelQuery<Instance<C>>(this).with(...paths);
   }
 
+  /** Rows with at least one related row. See {@link ModelQuery.whereHas}. */
+  static whereHas<C extends ModelClass, Q extends RelationPaths<Instance<C>>>(
+    this: C,
+    relation: Q,
+    constrain?: RelationConstraint<ModelAt<Instance<C>, Q>>,
+  ): ModelQuery<Instance<C>> {
+    return new ModelQuery<Instance<C>>(this).whereHas(relation, constrain);
+  }
+
+  /** Rows with no related row. See {@link ModelQuery.whereDoesntHave}. */
+  static whereDoesntHave<
+    C extends ModelClass,
+    Q extends RelationPaths<Instance<C>>,
+  >(
+    this: C,
+    relation: Q,
+    constrain?: RelationConstraint<ModelAt<Instance<C>, Q>>,
+  ): ModelQuery<Instance<C>> {
+    return new ModelQuery<Instance<C>>(this).whereDoesntHave(
+      relation,
+      constrain,
+    );
+  }
+
+  /** Add `<relation>_count` to each result. See {@link ModelQuery.withCount}. */
+  static withCount<C extends ModelClass, N extends RelationKeys<Instance<C>>>(
+    this: C,
+    ...relations: N[]
+  ): ModelQuery<Instance<C>, never, ColumnKeys<Instance<C>>, Counted<N>>;
+  static withCount<C extends ModelClass, N extends RelationKeys<Instance<C>>>(
+    this: C,
+    relation: N,
+    constrain: RelationConstraint<RelatedModel<Instance<C>[N]>>,
+  ): ModelQuery<Instance<C>, never, ColumnKeys<Instance<C>>, Counted<N>>;
+  static withCount(this: ModelClass, ...args: any[]): any {
+    return (new ModelQuery<any>(this).withCount as any)(...args);
+  }
+
+  /** Query with a reusable {@link Scope} applied. */
+  static scope<C extends ModelClass, A extends unknown[]>(
+    this: C,
+    scope: Scope<Instance<C>, A>,
+    ...args: A
+  ): ModelQuery<Instance<C>> {
+    return new ModelQuery<Instance<C>>(this).scope(scope, ...args);
+  }
+
   /** Query including soft-deleted rows. */
   static withTrashed<C extends ModelClass>(this: C): ModelQuery<Instance<C>> {
     return new ModelQuery<Instance<C>>(this).withTrashed();
@@ -202,6 +262,104 @@ export abstract class Model {
     const found = await (this as any).find(id);
     if (!found) throw new NotFoundException(`${this.name} not found`);
     return found;
+  }
+
+  /**
+   * The first row matching a column value, or every given column:
+   * `User.findBy("email", "ann@x.io")`, `User.findBy({ email, active: true })`.
+   */
+  static findBy<
+    C extends ModelClass,
+    K extends keyof Columns<Instance<C>> & string,
+  >(
+    this: C,
+    column: K,
+    value: Columns<Instance<C>>[K],
+  ): Promise<Row<Instance<C>> | undefined>;
+  static findBy<C extends ModelClass>(
+    this: C,
+    values: Partial<Columns<Instance<C>>>,
+  ): Promise<Row<Instance<C>> | undefined>;
+  static findBy(this: ModelClass, ...args: any[]): Promise<any> {
+    return whereAll(this, args).first();
+  }
+
+  /** Like {@link Model.findBy}, but throws a 404 `NotFoundException` when nothing matches. */
+  static findByOrFail<
+    C extends ModelClass,
+    K extends keyof Columns<Instance<C>> & string,
+  >(
+    this: C,
+    column: K,
+    value: Columns<Instance<C>>[K],
+  ): Promise<Row<Instance<C>>>;
+  static findByOrFail<C extends ModelClass>(
+    this: C,
+    values: Partial<Columns<Instance<C>>>,
+  ): Promise<Row<Instance<C>>>;
+  static findByOrFail(this: ModelClass, ...args: any[]): Promise<any> {
+    return whereAll(this, args).firstOrFail();
+  }
+
+  /** Number of rows (soft-deleted rows excluded). */
+  static count<C extends ModelClass>(this: C): Promise<number> {
+    return new ModelQuery<Instance<C>>(this).count();
+  }
+
+  /** Sum of `column`; `0` for an empty table. */
+  static sum<C extends ModelClass>(
+    this: C,
+    column: keyof Columns<Instance<C>> & string,
+  ): Promise<number> {
+    return new ModelQuery<Instance<C>>(this).sum(column);
+  }
+
+  /** Average of `column`; `null` for an empty table. */
+  static avg<C extends ModelClass>(
+    this: C,
+    column: keyof Columns<Instance<C>> & string,
+  ): Promise<number | null> {
+    return new ModelQuery<Instance<C>>(this).avg(column);
+  }
+
+  /** Smallest value of `column`; `null` for an empty table. */
+  static min<
+    C extends ModelClass,
+    K extends keyof Columns<Instance<C>> & string,
+  >(this: C, column: K): Promise<Columns<Instance<C>>[K] | null> {
+    return new ModelQuery<Instance<C>>(this).min(column);
+  }
+
+  /** Largest value of `column`; `null` for an empty table. */
+  static max<
+    C extends ModelClass,
+    K extends keyof Columns<Instance<C>> & string,
+  >(this: C, column: K): Promise<Columns<Instance<C>>[K] | null> {
+    return new ModelQuery<Instance<C>>(this).max(column);
+  }
+
+  /** One page of every row. See {@link ModelQuery.paginate}. */
+  static paginate<C extends ModelClass>(
+    this: C,
+    request?: PageRequest,
+  ): Promise<Paginated<Row<Instance<C>>>> {
+    return new ModelQuery<Instance<C>>(this).paginate(request);
+  }
+
+  /** One page without a total count. See {@link ModelQuery.simplePaginate}. */
+  static simplePaginate<C extends ModelClass>(
+    this: C,
+    request?: PageRequest,
+  ): Promise<SimplePaginated<Row<Instance<C>>>> {
+    return new ModelQuery<Instance<C>>(this).simplePaginate(request);
+  }
+
+  /** Keyset pagination. See {@link ModelQuery.cursorPaginate}. */
+  static cursorPaginate<C extends ModelClass>(
+    this: C,
+    request?: CursorPageRequest<keyof Columns<Instance<C>> & string>,
+  ): Promise<CursorPaginated<Row<Instance<C>>>> {
+    return new ModelQuery<Instance<C>>(this).cursorPaginate(request);
   }
 
   /** Insert a row and return it as a model instance. */
@@ -299,25 +457,52 @@ export abstract class Model {
    */
   related<K extends BelongsToManyKeys<this>>(
     name: K,
-  ): PivotRelation<RelatedModel<this[K]>, PivotOf<this[K]>> {
+  ): PivotRelation<RelatedModel<this[K]>, PivotOf<this[K]>>;
+  /**
+   * The rows of a `hasMany` / `hasOne` relation, to query or create them
+   * with the foreign key set: `await user.related("posts").create({ title })`.
+   */
+  related<K extends HasRelationKeys<this>>(
+    name: K,
+  ): HasRelation<
+    RelatedModel<this[K]>,
+    this[K] extends HasManyMarker ? "many" : "one"
+  >;
+  related(name: string): unknown {
     const def = getRelation(this.constructor as ModelClass, name);
-    return new PivotRelation(this, def);
+    if (def.kind === "belongsToMany") return new PivotRelation(this, def);
+    if (def.kind === "hasMany" || def.kind === "hasOne") {
+      return new HasRelation(this, def);
+    }
+    throw new Error(
+      `[Megh ORM] related("${name}") works with hasMany, hasOne and belongsToMany relations.`,
+    );
   }
 
   private key(): unknown {
     return (this as any)[(this.constructor as ModelClass).primaryKey];
   }
 
-  /** Columns and loaded relations. */
+  /** Columns, loaded relations, and extras such as `pivot` and `withCount()` counts. */
   toJSON(): Record<string, unknown> {
     const out: Record<string, unknown> = {};
-    for (const [key, value] of Object.entries(this)) {
+    // Columns and relations are enumerable own properties; extras are not.
+    for (const key of Object.getOwnPropertyNames(this)) {
+      const value = (this as any)[key];
       if (value !== undefined && !isRelationMarker(value)) out[key] = value;
-    }
-    const pivot = (this as any).pivot;
-    if (pivot && !Object.prototype.propertyIsEnumerable.call(this, "pivot")) {
-      out.pivot = pivot;
     }
     return out;
   }
+}
+
+type HasManyMarker = { readonly [RELATION]: { type: "hasMany" } };
+
+/** A query matching `findBy(column, value)` or `findBy({ column: value })`. */
+function whereAll(cls: ModelClass, args: any[]): ModelQuery<any> {
+  const query = new ModelQuery<any>(cls);
+  if (args.length >= 2) return query.where(args[0], args[1]);
+  for (const [column, value] of Object.entries(args[0] ?? {})) {
+    query.where(column, value);
+  }
+  return query;
 }

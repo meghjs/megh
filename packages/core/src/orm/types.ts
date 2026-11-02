@@ -66,6 +66,18 @@ export type BelongsToManyKeys<M> = keyof {
 } &
   string;
 
+/** Keys of `hasMany` and `hasOne` relations. */
+export type HasRelationKeys<M> = keyof {
+  [
+    K in keyof M as M[K] extends {
+      readonly [RELATION]: { type: "hasMany" | "hasOne" };
+    }
+      ? K
+      : never
+  ]: 0;
+} &
+  string;
+
 export type RelatedModel<R> = R extends {
   readonly [RELATION]: { model: infer T };
 }

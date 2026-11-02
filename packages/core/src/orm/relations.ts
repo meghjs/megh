@@ -77,15 +77,30 @@ interface DeclaredRelation {
 
 /** One-to-many: `posts = hasMany(() => Post)`. Loads as `Post[]`. */
 export interface HasMany<M> {
-  readonly [RELATION]: { kind: "many"; model: M; def: DeclaredRelation };
+  readonly [RELATION]: {
+    kind: "many";
+    type: "hasMany";
+    model: M;
+    def: DeclaredRelation;
+  };
 }
 /** One-to-one: `profile = hasOne(() => Profile)`. Loads as `Profile | null`. */
 export interface HasOne<M> {
-  readonly [RELATION]: { kind: "one"; model: M; def: DeclaredRelation };
+  readonly [RELATION]: {
+    kind: "one";
+    type: "hasOne";
+    model: M;
+    def: DeclaredRelation;
+  };
 }
 /** Inverse side: `author = belongsTo(() => User, "user_id")`. Loads as `User | null`. */
 export interface BelongsTo<M> {
-  readonly [RELATION]: { kind: "one"; model: M; def: DeclaredRelation };
+  readonly [RELATION]: {
+    kind: "one";
+    type: "belongsTo";
+    model: M;
+    def: DeclaredRelation;
+  };
 }
 
 /**
@@ -95,6 +110,7 @@ export interface BelongsTo<M> {
 export interface BelongsToMany<M, Pivot = {}> {
   readonly [RELATION]: {
     kind: "many";
+    type: "belongsToMany";
     model: M;
     pivot: Pivot;
     def: DeclaredRelation;
@@ -114,7 +130,7 @@ export type AnyRelation =
 function marker(def: DeclaredRelation): any {
   const kind =
     def.kind === "hasMany" || def.kind === "belongsToMany" ? "many" : "one";
-  const out: any = { [RELATION]: { kind, def } };
+  const out: any = { [RELATION]: { kind, type: def.kind, def } };
   if (def.kind === "belongsToMany") {
     out.withPivot = (...columns: string[]) => {
       def.pivot!.columns.push(...columns);

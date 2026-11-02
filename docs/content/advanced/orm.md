@@ -149,6 +149,9 @@ Query results are instances of the model, so methods and getters work on them.
 await User.all();
 await User.find(1);              // User | undefined
 await User.findOrFail(1);        // throws a 404 NotFoundException if missing
+await User.findBy('email', 'ann@acme.io');       // first match, or undefined
+await User.findBy({ email: 'ann@acme.io', active: true });
+await User.findByOrFail('email', 'ann@acme.io'); // or a 404
 
 await User.where('email', 'ann@acme.io').first();
 await User.where('id', '>', 10).orderBy('name', 'desc').limit(10).offset(20).get();
@@ -158,9 +161,10 @@ await User.query().whereNotNull('name').count();
 await User.where('email', 'ann@acme.io').exists();
 ```
 
-`User.where()` and `User.with()` start a query; `User.query()` starts an empty
-one. Nothing runs until `get()`, `first()`, `firstOrFail()`, `count()`,
-`exists()`, `paginate()`, `update()` or `delete()` is called.
+`User.where()`, `User.with()`, `User.whereHas()`, `User.withCount()` and
+`User.scope()` start a query; `User.query()` starts an empty one. Nothing runs
+until `get()`, `first()`, `firstOrFail()`, `count()`, `exists()`, an aggregate,
+a paginate method, `update()` or `delete()` is called.
 
 Pass a callback for anything else Kysely can express, such as `OR` groups:
 
@@ -176,6 +180,31 @@ rows[0].email; // string
 rows[0].name;  // compile error
 ```
 
+### Aggregates
+
+```ts
+await Post.count();
+await Post.sum('views');                         // 0 when no rows match
+await Post.where('user_id', 1).avg('views');     // null when no rows match
+await Post.min('published_on');                  // casts apply: a Date here
+await Post.max('views');
+```
+
+Aggregates respect filters and soft deletes, like every other query.
+
+### Scopes
+
+A scope is a reusable piece of a query, typed for its model:
+
+```ts
+import type { Scope } from '@meghjs/core';
+
+const published: Scope<Post> = (q) => q.whereNotNull('published_on');
+const byAuthor: Scope<Post, [number]> = (q, userId) => q.where('user_id', userId);
+
+await Post.scope(published).scope(byAuthor, 1).orderBy('id').get();
+```
+
 ### Pagination
 
 `paginate()` returns the same `{ data, meta }` shape as the rest of Megh:
@@ -183,7 +212,33 @@ rows[0].name;  // compile error
 ```ts
 const page = await Post.query().orderBy('id').paginate({ page: 2, perPage: 20 });
 // page.meta → { total, page, perPage, lastPage, next, prev }
+await Post.paginate({ page: 1 }); // every row
 ```
+
+`simplePaginate()` skips the `count(*)` query, which is costly on large
+tables. It fetches one extra row to tell whether another page follows:
+
+```ts
+const page = await Post.query().simplePaginate({ page: 2, perPage: 20 });
+// page.meta → { page, perPage, hasMore, next, prev }
+```
+
+`cursorPaginate()` pages by key instead of by offset. Pages stay stable when
+rows are inserted, and deep pages are as fast as the first. Pass the returned
+`nextCursor` back to get the next page:
+
+```ts
+const first = await Post.where('published', true).cursorPaginate({ perPage: 20 });
+const next = await Post.where('published', true).cursorPaginate({
+  perPage: 20,
+  cursor: first.meta.nextCursor, // null on the last page
+});
+// meta → { perPage, hasMore, nextCursor }
+```
+
+It orders by the primary key by default; pass `column` (it must be unique)
+and `direction: 'desc'` to change that. An invalid cursor throws a 400
+`BadRequestException`.
 
 ## Creating, updating and deleting
 
@@ -257,6 +312,50 @@ select * from users
 select * from posts where user_id in (?, ?)
 select * from comments where post_id in (?, ?, ?)
 select * from profiles where user_id in (?, ?)
+```
+
+### Querying by relation
+
+`whereHas()` keeps rows that have a related row; `whereDoesntHave()` keeps
+those that don't. Narrow the related rows with a callback, and follow nested
+relations with dots:
+
+```ts
+await User.whereHas('posts').get();
+await User.whereHas('posts', (q) => q.where('published', true)).get();
+await User.whereHas('posts.comments', (q) => q.where('body', 'like', '%megh%')).get();
+await User.whereDoesntHave('roles').delete();
+```
+
+Each one runs as an `EXISTS` subquery, so it works with `count()`,
+`paginate()`, `update()` and `delete()` too. Soft-deleted related rows don't
+count.
+
+### Counting related rows
+
+`withCount()` adds a `<relation>_count` number to each result, without loading
+the rows:
+
+```ts
+const users = await User.withCount('posts', 'roles').get();
+users[0].posts_count; // number
+
+await User.query().withCount('posts', (q) => q.where('published', true)).get();
+```
+
+Counts appear in JSON but are never written back by `save()`.
+
+### Creating related rows
+
+`related()` on a `hasMany` or `hasOne` relation creates rows with the foreign
+key already set:
+
+```ts
+const post = await user.related('posts').create({ title: 'Hello' }); // user_id set
+await user.related('posts').createMany([{ title: 'A' }, { title: 'B' }]);
+await user.related('posts').save(existingPost);  // moves it to this user
+await user.related('posts').query().where('published', true).get();
+const profile = await user.related('profile').get(); // Profile | null
 ```
 
 ### Many-to-many
@@ -404,7 +503,26 @@ await Model.transaction(async () => {
 
 Every model query inside the callback uses the transaction, even in functions
 it calls. The transaction commits when the callback resolves and rolls back if
-it throws. A nested `Model.transaction()` joins the outer one.
+it throws.
+
+A nested `Model.transaction()` runs in a savepoint. If it throws, only its own
+work is rolled back, and the error still reaches the caller:
+
+```ts
+await Model.transaction(async () => {
+  await Order.create({ total: 10 });
+  try {
+    await Model.transaction(async () => {
+      await Invoice.create({ order_id: 1 });
+      throw new Error('mailer down');
+    });
+  } catch {
+    // the invoice is gone, the order is kept
+  }
+});
+```
+
+If the outer transaction rolls back, so does everything nested inside it.
 
 ## Raw queries
 
@@ -528,12 +646,13 @@ failed run throws a `MigrationError` with `migration` (the one that failed) and
 `completed` (those that ran before it; on PostgreSQL and SQL Server they were
 rolled back with it).
 
-## Not yet supported
+## Generating models
 
-- `whereHas`-style filtering on relations, `withCount`, and query scopes
-- Creating related rows through `hasMany` (e.g. `user.related('posts').create()`)
-- Savepoints: a nested transaction joins the outer one
-- Generating models for this ORM with `make:model`
+`npx megh make:model user` writes `src/models/user.model.ts`, with its
+columns read from the migrations that create and change the `users` table.
+See [CLI: Model](/cli/basic#model).
+
+## Testing
 
 The ORM is tested against SQLite. The MySQL path for reading back inserted
 rows, which has no `RETURNING`, is implemented but not yet covered by tests.

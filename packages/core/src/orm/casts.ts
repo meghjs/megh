@@ -100,14 +100,19 @@ export function castFromDatabase(
   return out;
 }
 
-/** True when `db` uses Kysely's SQLite adapter (or a subclass of it). */
-export function isSqlite(db: Kysely<any>): boolean {
+/** True when `db` uses the Kysely adapter class `name` (or a subclass of it). */
+export function usesAdapter(db: Kysely<any>, name: string): boolean {
   let proto = Object.getPrototypeOf(db.getExecutor().adapter);
   while (proto && proto !== Object.prototype) {
-    if (proto.constructor?.name === "SqliteAdapter") return true;
+    if (proto.constructor?.name === name) return true;
     proto = Object.getPrototypeOf(proto);
   }
   return false;
+}
+
+/** True when `db` uses Kysely's SQLite adapter (or a subclass of it). */
+export function isSqlite(db: Kysely<any>): boolean {
+  return usesAdapter(db, "SqliteAdapter");
 }
 
 /** A value the driver can bind: `Date`/`boolean` become text/0-1 on SQLite. */

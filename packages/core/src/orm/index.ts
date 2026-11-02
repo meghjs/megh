@@ -1,5 +1,16 @@
 export { Model } from "./model";
-export { ModelQuery, type ComparisonOperator } from "./query";
+export {
+  ModelQuery,
+  type ComparisonOperator,
+  type Counted,
+  type CursorPageRequest,
+  type CursorPaginated,
+  type ModelAt,
+  type RelationConstraint,
+  type Scope,
+  type SimplePaginated,
+} from "./query";
+export { HasRelation } from "./has-relation";
 export {
   hasMany,
   hasOne,
@@ -20,6 +31,7 @@ export type {
   RelationKeys,
   RelationPaths,
   BelongsToManyKeys,
+  HasRelationKeys,
   PivotOf,
   TimestampKeys,
   Row,
