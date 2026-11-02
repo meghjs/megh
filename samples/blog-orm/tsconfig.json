@@ -1,0 +1,23 @@
+{
+  "compilerOptions": {
+    "target": "ES2022",
+    "module": "CommonJS",
+    "moduleResolution": "node",
+    "experimentalDecorators": true,
+    "emitDecoratorMetadata": true,
+    "outDir": "./dist",
+    "esModuleInterop": true,
+    "allowSyntheticDefaultImports": true,
+    "forceConsistentCasingInFileNames": true,
+    "skipLibCheck": true,
+    "sourceMap": true,
+    "strict": false,
+    // @meghjs/core is linked from this repo (file:../../packages/core), which
+    // would otherwise load a second copy of the Kysely types. Not needed when
+    // @meghjs/core comes from npm.
+    "baseUrl": ".",
+    "paths": { "kysely": ["./node_modules/kysely"] }
+  },
+  "include": ["megh-env.d.ts", "src/**/*"],
+  "exclude": ["node_modules", "dist"]
+}
