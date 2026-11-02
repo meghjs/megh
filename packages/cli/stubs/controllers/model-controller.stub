@@ -1,0 +1,34 @@
+import { ApiController, Body, Delete, Get, Param, Post, Put, Query } from '@meghjs/core';
+import { Create{Model}Dto, List{Plural}Query, Update{Model}Dto } from '{dtoImport}';
+import { {ServiceClass} } from '{serviceImport}';
+
+@ApiController('/{route}')
+export class {ClassName} {
+  constructor(private readonly {serviceVar}: {ServiceClass}) {}
+
+  @Get()
+  index(@Query() query: List{Plural}Query) {
+    return this.{serviceVar}.paginate(query);
+  }
+
+  @Get('/:id')
+  show(@Param('id') id: {primaryKeyType}) {
+    return this.{serviceVar}.findOrFail({idArg});
+  }
+
+  @Post()
+  create(@Body() body: Create{Model}Dto) {
+    return this.{serviceVar}.create(body);
+  }
+
+  @Put('/:id')
+  update(@Param('id') id: {primaryKeyType}, @Body() body: Update{Model}Dto) {
+    return this.{serviceVar}.update({idArg}, body);
+  }
+
+  @Delete('/:id')
+  async delete(@Param('id') id: {primaryKeyType}) {
+    await this.{serviceVar}.delete({idArg});
+    return { message: '{Model} deleted.' };
+  }
+}

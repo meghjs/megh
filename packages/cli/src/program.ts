@@ -14,6 +14,7 @@ import {
   makeMiddleware,
   makeMigration,
   makeModel,
+  makeResource,
   makeService,
 } from "./generators/make";
 import { log } from "./utils/log";
@@ -183,16 +184,35 @@ export function createProgram(run: RunOptions = {}): { program: Command; exitCod
       .argument("<name>", "Name, optionally nested (e.g. admin/User)")
       .option("-f, --force", "Overwrite the file if it exists");
 
-  make("make:model", ["m:m"], "Create a model in src/models/<name>.model.ts")
+  make("make:model", ["m:m"], "Create a model in src/models/<name>.model.ts, with columns read from its migrations")
+    .option("-t, --table <table>", "Table name (default: plural snake_case name, e.g. blog_posts)")
     .option("--orm", "Generate a TypeORM entity")
     .option("--root <dir>", "Folder under src/ to write to (also -rt)")
     .action((name: string, o) => {
       makeModel(name, { cwd: cwd(), ...o });
     });
 
+  make(
+    "make:resource",
+    ["m:r", "m:res"],
+    "Create a REST resource for a model: its DTOs, a CRUD service and a controller",
+  )
+    .option("-t, --table <table>", "Table to read the columns from when the model is missing (default: plural snake_case name)")
+    .addHelpText(
+      "after",
+      "\nThe model in src/models/<name>.model.ts is reused if it exists; otherwise it is\n" +
+        "generated from the migration that creates its table (and the command fails if\n" +
+        "there is none). Then src/dtos/<name>.dto.ts, src/services/<name>.service.ts and\n" +
+        "src/controllers/<name>.controller.ts are written, e.g. for `make:resource user`:\n" +
+        "  GET /users?page=&perPage=   POST /users   GET|PUT|DELETE /users/:id",
+    )
+    .action((name: string, o) => {
+      makeResource(name, { cwd: cwd(), force: o.force, table: o.table });
+    });
+
   make("make:controller", ["m:c"], "Create a controller in src/controllers/<name>.controller.ts")
     .option("-r, --resource", "Generate a REST skeleton (also --rest)")
-    .option("-m, --model <model>", "Back a REST controller with <model>: also creates its service and model if missing")
+    .option("-m, --model <model>", "Back a REST controller with <model>: also creates its DTOs, service and model (from its migration) if missing")
     .option("--orm", "With -m, back the service with a TypeORM repository and entity")
     .option("--root <dir>", "Folder under src/ to write to (also -rt)")
     .option("--base-path", "Use @ApiController without a path prefix")
@@ -202,7 +222,7 @@ export function createProgram(run: RunOptions = {}): { program: Command; exitCod
 
   make("make:service", ["m:s"], "Create a service in src/services/<name>.service.ts")
     .option("-r, --resource", "Generate a resource (CRUD) service; requires -m (also --rest)")
-    .option("-m, --model <model>", "Model for a resource service; creates the model if missing")
+    .option("-m, --model <model>", "Model for a resource service; creates the model from its migration if missing")
     .option("--orm", "Back the resource service with a TypeORM repository and entity")
     .option("--root <dir>", "Folder under src/ to write to (also -rt)")
     .action((name: string, o) => {

@@ -1,0 +1,42 @@
+import { AppService, type CreateInput, type PageRequest, type UpdateInput } from '@meghjs/core';
+import { {Model} } from '{modelImport}';
+
+@AppService
+export class {ClassName} {
+  /** Every {modelVar}, ordered by {primaryKey}. */
+  findAll() {
+    return {Model}.query().orderBy('{primaryKey}').get();
+  }
+
+  /** One page of {modelVar} rows: `{ data, meta }`. */
+  paginate(request: PageRequest = {}) {
+    return {Model}.query().orderBy('{primaryKey}').paginate(request);
+  }
+
+  /** The {modelVar} with this {primaryKey}, or `undefined`. */
+  find(id: {primaryKeyType}) {
+    return {Model}.find(id);
+  }
+
+  /** The {modelVar} with this {primaryKey}; throws a 404 when there is none. */
+  findOrFail(id: {primaryKeyType}) {
+    return {Model}.findOrFail(id);
+  }
+
+  create(input: CreateInput<typeof {Model}>) {
+    return {Model}.create(input);
+  }
+
+  /** `save()` writes only the columns that changed. */
+  async update(id: {primaryKeyType}, changes: UpdateInput<{Model}>) {
+    const {modelVar} = await {Model}.findOrFail(id);
+    // A DTO instance holds `undefined` for every field that was not sent.
+    const sent = Object.fromEntries(Object.entries(changes).filter(([, value]) => value !== undefined));
+    return {modelVar}.fill(sent).save();
+  }
+
+  async delete(id: {primaryKeyType}) {
+    const {modelVar} = await {Model}.findOrFail(id);
+    await {modelVar}.delete();
+  }
+}

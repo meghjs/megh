@@ -134,13 +134,32 @@ describe("generators", () => {
     expect(() => makeModel("product", { cwd: tmp, force: true })).not.toThrow();
   });
 
-  it("creates a resource controller with its service and model", () => {
+  it("creates a resource controller with its DTOs, service and model (from the migration)", () => {
+    const migrations = path.join(tmp, "src", "database", "migrations");
+    fs.mkdirSync(migrations, { recursive: true });
+    fs.writeFileSync(
+      path.join(migrations, "20260101000000_create_products_table.ts"),
+      `export async function up(db) {
+  await db.schema.createTable("products")
+    .addColumn("id", "integer", (col) => col.primaryKey().autoIncrement())
+    .addColumn("name", "text", (col) => col.notNull())
+    .execute();
+}`,
+    );
     makeController("admin/product", { cwd: tmp, model: "product" });
     const ctrl = read("src", "controllers", "admin", "product.controller.ts");
     expect(ctrl).toContain("class ProductController");
+    expect(ctrl).toContain("@ApiController('/admin/products')");
     expect(ctrl).toContain("from '../../services/product.service'");
-    expect(exists("src", "services", "product.service.ts")).toBe(true);
-    expect(exists("src", "models", "product.model.ts")).toBe(true);
+    expect(ctrl).toContain("from '../../dtos/product.dto'");
+    expect(read("src", "services", "product.service.ts")).toContain("Product.findOrFail(id)");
+    expect(read("src", "models", "product.model.ts")).toContain("class Product extends Model");
+    expect(read("src", "dtos", "product.dto.ts")).toContain("class CreateProductDto");
+  });
+
+  it("refuses a resource controller without a model or migration, writing nothing", () => {
+    expect(() => makeController("product", { cwd: tmp, model: "product" })).toThrow(/make:migration create_products_table/);
+    expect(exists("src")).toBe(false);
   });
 
   it("requires a model for a resource service", () => {

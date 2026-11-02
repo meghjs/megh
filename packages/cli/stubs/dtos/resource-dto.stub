@@ -1,0 +1,28 @@
+import { Type } from 'class-transformer';
+import { {validators} } from 'class-validator';
+
+/** `POST /{route}` body. Columns the database fills in are optional. */
+export class Create{Model}Dto {
+{createFields}
+}
+
+/** `PUT /{route}/:id` body: only the columns sent are changed. */
+export class Update{Model}Dto {
+{updateFields}
+}
+
+/** `GET /{route}?page=1&perPage=10` */
+export class List{Plural}Query {
+  @IsOptional()
+  @Type(() => Number)
+  @IsInt()
+  @Min(1)
+  page?: number;
+
+  @IsOptional()
+  @Type(() => Number)
+  @IsInt()
+  @Min(1)
+  @Max(100)
+  perPage?: number;
+}

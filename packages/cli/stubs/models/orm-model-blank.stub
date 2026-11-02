@@ -1,0 +1,10 @@
+import { Model } from "@meghjs/core";
+
+export class {Model} extends Model {
+  static readonly table = {table};
+
+  id!: number;
+  // One field per column, e.g.:
+  // email!: string;
+  // name!: string | null;
+}
