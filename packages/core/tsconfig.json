@@ -21,7 +21,7 @@
     "strictPropertyInitialization": false,
     "skipLibCheck": true,
 
-    // Node 20 built-ins. Tests import their APIs from vitest.
+    // Node 22 built-ins. Tests import their APIs from vitest.
     "types": ["node"],
     "paths": {
       "knex": ["./node_modules/knex/types/index.d.ts"]

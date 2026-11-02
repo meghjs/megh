@@ -63,7 +63,7 @@ npm install @meghjs/core reflect-metadata class-validator class-transformer
 
 ## Working on Megh
 
-Requirements: Node.js 22.22+ or 24.15+ (needed by Lerna 10), npm and git. The published packages still support Node.js 20, and CI tests them on it.
+Requirements: Node.js 22.22+ or 24.15+ (needed by Lerna 10), npm and git. The published packages support Node.js 22 and newer, and CI tests them on Node.js 22 and 24.
 
 ```bash
 npm run setup       # npm ci at the root (all packages) and in docs

@@ -37,7 +37,7 @@ const DEP_VERSIONS: Record<string, string> = {
   knex: "^3.1.0",
   "@scalar/fastify-api-reference": "^1.0.0",
   typescript: "^5.7.2",
-  "@types/node": "^22.9.3",
+  "@types/node": "^22.20.5",
   vitest: "^4.1.12",
   "@vitest/coverage-v8": "^4.1.12",
   "unplugin-swc": "^2.0.0",
@@ -139,7 +139,7 @@ export function packageJson(name: string, features: Feature[], minimal: boolean)
     main: "dist/serve.js",
     scripts,
     keywords: ["megh", "nodejs", "typescript"],
-    engines: { node: ">=20" },
+    engines: { node: ">=22" },
     dependencies: sortKeys(deps),
     devDependencies: sortKeys(devDeps),
   };

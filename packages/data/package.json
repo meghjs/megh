@@ -23,7 +23,7 @@
     "plugin": "./dist/plugin.js"
   },
   "engines": {
-    "node": ">=20.0.0"
+    "node": ">=22.0.0"
   },
   "files": [
     "dist",
@@ -80,7 +80,7 @@
   "devDependencies": {
     "@meghjs/core": "^0.5.0",
     "@swc/core": "^1.16.20",
-    "@types/node": "^20.19.17",
+    "@types/node": "^22.20.5",
     "better-sqlite3": "^12.9.0",
     "knex": "^3.1.0",
     "reflect-metadata": "^0.2.2",

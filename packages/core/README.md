@@ -77,7 +77,7 @@ Megh is a TypeScript-first web framework built on top of [Fastify](https://fasti
 
 ## Installation
 
-Megh requires **Node.js 20 or newer**.
+Megh requires **Node.js 22 or newer**.
 
 Scaffold a new project using the CLI:
 
@@ -1267,7 +1267,7 @@ for 2.0. These lists track what has landed and what still blocks 1.0.0.
 - [x] Keep typedi behind `MeghContainer` for 1.0; it can be swapped in a later minor release
 - [x] MIT license file matches `package.json`
 - [x] Build without rimraf, ESLint/Jest configs fixed, husky 9, coverage off by default
-- [x] CI on Node 20 and 22 (typecheck, lint, test, build) and a tag-based publish workflow
+- [x] CI on Node 22 and 24 (typecheck, lint, test, build) and a tag-based publish workflow
 - [x] Request-pipeline integration tests
 
 **Docs**

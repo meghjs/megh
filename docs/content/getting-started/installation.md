@@ -5,7 +5,7 @@ description: Megh installation
 
 # Installation
 
-Megh requires **Node.js 20 or newer**.
+Megh requires **Node.js 22 or newer**.
 
 ## Using Cli
 

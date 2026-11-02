@@ -7,7 +7,7 @@ web framework built on Fastify. The site is built with
 
 ## Development
 
-Requires Node.js 20 or newer.
+Requires Node.js 22 or newer.
 
 ```sh
 npm install
