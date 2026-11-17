@@ -91,8 +91,16 @@ npm run start:dev
 npx megh serve
 ```
 
-Compiles `src/` with SWC into `dist/`, starts the app and restarts it on change.
-The entry point comes from `megh.entry` in `package.json`, falling back to `main`.
+Compiles `src/` with SWC into `.megh/build/`, starts the app and restarts it on
+change. The entry point comes from `megh.entry` in `package.json`, falling back
+to `main`; an entry inside `dist/` (`dist/serve.js`) runs from `.megh/build/`.
+
+`.megh/` belongs to the dev server: it is recreated on every start, safe to
+delete, and should be in `.gitignore` (`megh new` adds it). `dist/` only ever
+holds what `megh build` produced, so `megh build` and `megh serve` can run at
+the same time. Auto-registered controllers and scheduled tasks are loaded from
+`.megh/build/` under `megh serve` (Megh passes it as `MEGH_BUILD_DIR`) and from
+`dist/` under `megh start`.
 
 ## Build
 

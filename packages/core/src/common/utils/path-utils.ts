@@ -218,6 +218,8 @@ function parseJsonc(text: string): unknown {
  * set, tsc may keep the `src` folder inside `outDir` (`dist/src/...`), so
  * that is tried too. Only a leading segment changes: a `src` elsewhere in
  * the path (`app/src/controllers`) is left alone.
+ *
+ * `MEGH_BUILD_DIR` (set by `megh serve` to `.megh/build`) replaces `outDir`.
  */
 export function resolveSourceDir(
   dir: string,
@@ -238,6 +240,10 @@ export function resolveSourceDir(
   if (!underRoot) return path.join(root, ...segments);
 
   const rest = rootDir[0] === "." ? segments : segments.slice(rootDir.length);
+  // `megh serve` compiles the source folder into its own directory (flat,
+  // like SWC) and passes it here, so dev output never mixes with dist/.
+  const buildDir = process.env.MEGH_BUILD_DIR;
+  if (buildDir) return path.resolve(root, buildDir, ...rest);
   const candidates = [path.join(root, outDir, ...rest)];
   if (layout.rootDir === undefined) {
     // No rootDir: tsc mirrors the common source root, which can keep `src`.

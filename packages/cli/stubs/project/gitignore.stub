@@ -1,5 +1,6 @@
 node_modules/
 dist/
+.megh/
 .env
 .env.local
 coverage/

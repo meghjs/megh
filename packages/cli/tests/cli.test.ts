@@ -16,7 +16,7 @@ import {
   makeModel,
   makeService,
 } from "../src/generators/make";
-import { entryCandidates, projectLayout, resolveEntry } from "../src/utils/entry";
+import { entryCandidates, projectLayout, resolveEntry, devBuildDir } from "../src/utils/entry";
 import { kebabCase, pascalCase, resolveName } from "../src/utils/names";
 import { parseJsonc, readTsConfig } from "../src/utils/tsconfig";
 import { CliError } from "../src/errors";
@@ -97,6 +97,21 @@ describe("entry resolution", () => {
     fs.mkdirSync(path.join(tmp, "dist"));
     fs.writeFileSync(path.join(tmp, "dist", "serve.js"), "");
     expect(resolveEntry(list)).toBe(path.join(tmp, "dist", "serve.js"));
+  });
+
+  it("maps entries into .megh/build for megh serve (#119)", () => {
+    project();
+    const layout = projectLayout(tmp);
+    const dev = devBuildDir(tmp);
+    expect(dev).toBe(path.join(tmp, ".megh", "build"));
+    const list = entryCandidates(layout, { main: "src/app.ts", megh: { entry: "dist/src/serve.js" } }, "dist/main.js", dev);
+    expect(list.slice(0, 3)).toEqual([
+      path.join(dev, "main.js"),
+      path.join(dev, "serve.js"),
+      path.join(dev, "app.js"),
+    ]);
+    expect(list).toContain(path.join(dev, "index.js"));
+    expect(list.some((p) => p.startsWith(path.join(tmp, "dist")))).toBe(false);
   });
 
   it("does not fall back when --entry is missing", () => {

@@ -3,7 +3,7 @@ import fs from "fs";
 import path from "path";
 import { SwcCompiler, isTestFile, isTsSource } from "../compiler";
 import { CliError } from "../errors";
-import { entryCandidates, projectLayout, resolveEntry } from "../utils/entry";
+import { devBuildDir, entryCandidates, projectLayout, resolveEntry } from "../utils/entry";
 import { c, tagged } from "../utils/log";
 import { findTsc, killTree, treeSpawnOptions } from "../utils/process";
 import { copyAssets, isAsset, readPackageJson, requireProjectRoot } from "../utils/project";
@@ -24,7 +24,7 @@ const logWatch = tagged("WATCH", c.yellow);
 const logErr = (category: string) => tagged(category, c.red);
 
 /**
- * Development server: transpiles `src/` with SWC into the output dir, copies
+ * Development server: transpiles `src/` with SWC into `.megh/build`, copies
  * assets, runs the entry file, and restarts it on changes to sources, assets
  * or `.env*` files. Type errors are reported by a parallel `tsc --watch` and
  * never block a reload; syntax errors do, and stop the running app so stale
@@ -36,8 +36,12 @@ export async function serve(opts: ServeOptions = {}): Promise<void> {
   const pkg = readPackageJson(root);
   if (!fs.existsSync(layout.srcDir)) throw new CliError(`Source directory ${layout.srcDir} does not exist.`);
 
-  const compiler = new SwcCompiler(layout.srcDir, layout.outDir, layout.compilerOptions);
-  const candidates = entryCandidates(layout, pkg, opts.entry);
+  // Its own folder, not outDir: `megh build` output (dist/) stays untouched,
+  // and a build while the server runs doesn't delete what it runs from.
+  const buildDir = devBuildDir(root);
+  fs.rmSync(buildDir, { recursive: true, force: true });
+  const compiler = new SwcCompiler(layout.srcDir, buildDir, layout.compilerOptions);
+  const candidates = entryCandidates(layout, pkg, opts.entry, buildDir);
   const debounceMs = opts.debounce ?? 200;
   const failures = new Map<string, string>();
 
@@ -52,7 +56,7 @@ export async function serve(opts: ServeOptions = {}): Promise<void> {
   // ── Initial build ───────────────────────────────────────────────────────
   const started = Date.now();
   for (const [file, error] of compiler.compileAll()) failures.set(file, error);
-  copyAssets(layout.srcDir, layout.outDir);
+  copyAssets(layout.srcDir, buildDir);
   logServe(`Compiled in ${Date.now() - started}ms`);
 
   // ── App process ─────────────────────────────────────────────────────────
@@ -70,7 +74,8 @@ export async function serve(opts: ServeOptions = {}): Promise<void> {
     if (!entry) {
       logErr("MEGH")(
         `No entry file found. Tried:\n  ${candidates.map((p) => path.relative(root, p)).join("\n  ")}\n` +
-          `Set "megh": { "entry": "dist/serve.js" } or "main" in package.json, or pass --entry.`,
+          `Set "megh": { "entry": "dist/serve.js" } or "main" in package.json, or pass --entry. ` +
+          `megh serve runs it from ${path.relative(root, buildDir)}/.`,
       );
       return;
     }
@@ -78,7 +83,12 @@ export async function serve(opts: ServeOptions = {}): Promise<void> {
     const child = spawn(process.execPath, ["--enable-source-maps", entry], {
       cwd: root,
       stdio: "inherit",
-      env: { ...process.env, NODE_ENV: process.env.NODE_ENV ?? "development" },
+      env: {
+        ...process.env,
+        NODE_ENV: process.env.NODE_ENV ?? "development",
+        // Where auto-discovery (controllers, tasks) finds the compiled code.
+        MEGH_BUILD_DIR: buildDir,
+      },
       ...treeSpawnOptions,
     });
     app = child;
@@ -128,7 +138,7 @@ export async function serve(opts: ServeOptions = {}): Promise<void> {
     }, debounceMs);
   }
 
-  const outPath = (file: string) => path.join(layout.outDir, path.relative(layout.srcDir, file));
+  const outPath = (file: string) => path.join(buildDir, path.relative(layout.srcDir, file));
   const inSrc = (file: string) => {
     const rel = path.relative(layout.srcDir, file);
     return !!rel && !rel.startsWith("..") && !path.isAbsolute(rel);

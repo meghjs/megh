@@ -56,6 +56,9 @@ myapi/
 └── package.json
 ```
 
+`megh serve` compiles into `.megh/build/` and `megh build` into `dist/`.
+Both are generated and ignored by git.
+
 | Script | Description |
 |--------|-------------|
 | `start:dev` | Start the dev server with hot reload |

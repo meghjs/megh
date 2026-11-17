@@ -318,6 +318,25 @@ describe("resolveSourceDir (#104)", () => {
     ).toBe(path.join(process.cwd(), "build", "controllers"));
   });
 
+  it("uses MEGH_BUILD_DIR (megh serve's .megh/build) when set (#119)", () => {
+    const dev = path.join(process.cwd(), ".megh", "build");
+    process.env.MEGH_BUILD_DIR = dev;
+    try {
+      expect(
+        resolveSourceDir("src/controllers", false, { outDir: "dist" }),
+      ).toBe(path.join(dev, "controllers"));
+      // TypeScript run directly still reads the sources.
+      expect(resolveSourceDir("src/controllers", true)).toBe(
+        path.join(process.cwd(), "src", "controllers"),
+      );
+    } finally {
+      delete process.env.MEGH_BUILD_DIR;
+    }
+    expect(resolveSourceDir("src/controllers", false, { outDir: "dist" })).toBe(
+      path.join(process.cwd(), "dist", "controllers"),
+    );
+  });
+
   it("keeps src under outDir when rootDir is the project root", () => {
     expect(
       resolveSourceDir("src/tasks", false, { rootDir: ".", outDir: "out" }),
