@@ -14,6 +14,9 @@ folder as `megh build`, so one overwrote or deleted the other. It now
 compiles into `.megh/build/`, and `dist/` only holds production builds.
 
 - Add `.megh/` to `.gitignore` (and `.dockerignore`).
+- `megh migrate` and `megh route:list` compile into `.megh/migrate/` and
+  `.megh/route-list/` instead of `node_modules/.cache/megh/`. You can delete
+  the old folder.
 - `megh.entry: "dist/serve.js"` keeps working: under `megh serve` it runs
   `.megh/build/serve.js`.
 - If you start the app another way during development and rely on

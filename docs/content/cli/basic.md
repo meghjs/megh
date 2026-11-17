@@ -95,8 +95,10 @@ Compiles `src/` with SWC into `.megh/build/`, starts the app and restarts it on
 change. The entry point comes from `megh.entry` in `package.json`, falling back
 to `main`; an entry inside `dist/` (`dist/serve.js`) runs from `.megh/build/`.
 
-`.megh/` belongs to the dev server: it is recreated on every start, safe to
-delete, and should be in `.gitignore` (`megh new` adds it). `dist/` only ever
+`.megh/` holds everything the CLI generates: `build/` for `megh serve`, and
+the compiled sources `megh migrate` (`migrate/`) and `megh route:list`
+(`route-list/`) load. It is recreated as needed, safe to delete, survives
+`npm ci`, and should be in `.gitignore` (`megh new` adds it). `dist/` only ever
 holds what `megh build` produced, so `megh build` and `megh serve` can run at
 the same time. Auto-registered controllers and scheduled tasks are loaded from
 `.megh/build/` under `megh serve` (Megh passes it as `MEGH_BUILD_DIR`) and from

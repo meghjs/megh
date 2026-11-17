@@ -3,7 +3,7 @@ import fs from "fs";
 import path from "path";
 import { SwcCompiler } from "../compiler";
 import { CliError } from "../errors";
-import { projectLayout } from "../utils/entry";
+import { meghDir, projectLayout } from "../utils/entry";
 import { c, log } from "../utils/log";
 import { readPackageJson, requireProjectRoot } from "../utils/project";
 
@@ -179,7 +179,7 @@ function compiled(root: string) {
     );
   }
 
-  const cacheDir = path.join(root, "node_modules", ".cache", "megh", "migrate");
+  const cacheDir = path.join(meghDir(root), "migrate");
   fs.rmSync(cacheDir, { recursive: true, force: true });
   const inside = isInside;
 

@@ -3,7 +3,7 @@ import fs from "fs";
 import path from "path";
 import { SwcCompiler } from "../compiler";
 import { CliError } from "../errors";
-import { projectLayout } from "../utils/entry";
+import { meghDir, projectLayout } from "../utils/entry";
 import { c } from "../utils/log";
 import { requireProjectRoot } from "../utils/project";
 
@@ -68,7 +68,7 @@ process.exit(0);
 
 export function runtimeRoutes(root: string): Route[] {
   const layout = projectLayout(root);
-  const cacheDir = path.join(root, "node_modules", ".cache", "megh", "route-list");
+  const cacheDir = path.join(meghDir(root), "route-list");
   fs.rmSync(cacheDir, { recursive: true, force: true });
   const compiler = new SwcCompiler(layout.srcDir, cacheDir, layout.compilerOptions);
   const failures = compiler.compileAll();

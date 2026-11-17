@@ -29,7 +29,16 @@ const DEFAULT_ENTRIES = ["serve.js", "server.js", "main.js", "index.js"];
  * to delete, so the dev server never touches the `megh build` output.
  */
 export function devBuildDir(root: string): string {
-  return path.join(root, ".megh", "build");
+  return path.join(meghDir(root), "build");
+}
+
+/**
+ * `.megh/`: everything the CLI generates (the dev build, the compiled
+ * sources `megh migrate` and `megh route:list` load). Unlike
+ * `node_modules/.cache`, it survives `npm ci`.
+ */
+export function meghDir(root: string): string {
+  return path.join(root, ".megh");
 }
 
 const isWithin = (dir: string, file: string) => {

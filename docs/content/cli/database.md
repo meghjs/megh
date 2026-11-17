@@ -24,11 +24,11 @@ The `migrate` commands connect the way `app.useMeghORM()` does, from
 `megh.migrations` in `package.json` to use another folder. See
 [MeghORM: Migrations](/advanced/orm/migrations).
 
-By default they compile `src/` with SWC into `node_modules/.cache/megh`
-first. With `--compiled` they run the `.js` files `megh build` wrote to the
-tsconfig `outDir` instead (`dist/database/migrations`, or
-`dist/src/database/migrations` when `rootDir` isn't set), so the sources and
-a writable `node_modules` aren't needed. This happens automatically when
+By default they compile `src/` with SWC into `.megh/migrate` first. With
+`--compiled` they run the `.js` files `megh build` wrote to the tsconfig
+`outDir` instead (`dist/database/migrations`, or
+`dist/src/database/migrations` when `rootDir` isn't set), so neither the
+sources nor a writable project folder are needed. This happens automatically when
 there is no `src/` folder, as in a production image. Every `migrate*`
 command and `db:seed` accepts `--compiled`.
 

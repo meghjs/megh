@@ -134,6 +134,9 @@ describe("migrate commands", () => {
     expect(await runCli(["migrate"], { cwd: root })).toBe(0);
     expect(tables()).toEqual(["posts", "users"]);
     expect(out.join("\n")).toContain("Migrated: 20260101000000_create_users_table");
+    // Compiled into .megh/, not node_modules/.cache (#119).
+    expect(fs.existsSync(path.join(root, ".megh", "migrate"))).toBe(true);
+    expect(fs.existsSync(path.join(root, "node_modules", ".cache", "megh"))).toBe(false);
 
     out.length = 0;
     expect(await runCli(["migrate"], { cwd: root })).toBe(0);
@@ -212,7 +215,7 @@ describe("migrate commands", () => {
     expect(await runCli(["migrate"], { cwd: root })).toBe(0);
     expect(tables()).toEqual(["users"]);
     expect(out.join("\n")).toContain("running the compiled files in dist/");
-    expect(fs.existsSync(path.join(root, "node_modules", ".cache", "megh", "migrate"))).toBe(false);
+    expect(fs.existsSync(path.join(root, ".megh", "migrate"))).toBe(false);
   });
 
   it("--compiled reads the outDir from tsconfig, also nested under src/ (#107)", async () => {

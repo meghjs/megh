@@ -167,7 +167,7 @@ export function createProgram(run: RunOptions = {}): { program: Command; exitCod
     )
     .addHelpText(
       "after",
-      "\nBy default the sources are compiled with SWC to node_modules/.cache/megh and each\n" +
+      "\nBy default the sources are compiled with SWC to .megh/route-list and each\n" +
         "*.controller.ts is loaded in a child process to read Megh's route metadata, so\n" +
         "@meghjs/core must be installed. --static needs no dependencies but only understands\n" +
         "string-literal paths.",

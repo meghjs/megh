@@ -144,6 +144,7 @@ CMD ["node", "--enable-source-maps", "dist/serve.js"]
 ```text [.dockerignore]
 node_modules
 dist
+.megh
 .env
 .env.*
 coverage
@@ -193,7 +194,7 @@ example as a release step, a Kubernetes `Job` or an init container.
 In the runtime image, run the built migrations with `megh migrate
 --compiled`. It loads the `.js` files from `dist/` (the tsconfig `outDir`),
 so it needs `@meghjs/cli` installed but not the sources or a writable
-`node_modules`. Without a `src/` folder this is the default, so plain
+project folder. Without a `src/` folder this is the default, so plain
 `megh migrate` works there too. Set `DATABASE_URL`. See
 [Database Commands](/cli/database).
 
