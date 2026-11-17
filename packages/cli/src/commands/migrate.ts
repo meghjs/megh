@@ -49,7 +49,16 @@ export function databasePaths(root: string, pkg: Record<string, any> = readPacka
 }
 
 export type MigrateAction = "latest" | "rollback" | "reset" | "refresh" | "status" | "seed";
-export type MigrateOptions = { cwd?: string; step?: number };
+export type MigrateOptions = {
+  cwd?: string;
+  step?: number;
+  /**
+   * Run the compiled `.js` files from the tsconfig `outDir` (what `megh build`
+   * produced) instead of compiling `src/` with SWC. Turned on automatically
+   * when the source folder doesn't exist but the output does.
+   */
+  compiled?: boolean;
+};
 
 const MARKER = "__MEGH_MIGRATE__";
 
@@ -108,10 +117,61 @@ const send = (value) => console.log(${JSON.stringify(MARKER)} + JSON.stringify(v
 })();
 `;
 
+const relTo = (root: string, p: string) => path.relative(root, p).split(path.sep).join("/");
+const isInside = (dir: string, file: string) => {
+  const r = path.relative(dir, file);
+  return !r.startsWith("..") && !path.isAbsolute(r);
+};
+
+/**
+ * Paths of the built app, for production images that have `dist/` but no
+ * `src/`. A path under the source folder is mapped into `outDir` (`.ts` →
+ * `.js`), also trying the nested `outDir/src/...` tsc writes when `rootDir`
+ * isn't set. Other paths are used as they are.
+ */
+export function builtPaths(root: string) {
+  const layout = projectLayout(root, true);
+  const paths = databasePaths(root);
+  const rel = (p: string) => relTo(root, p);
+  if (!fs.existsSync(layout.outDir)) {
+    throw new CliError(
+      `--compiled runs the built app, but ${rel(layout.outDir)}/ doesn't exist. Run megh build first.`,
+    );
+  }
+  const explicitRootDir = typeof layout.compilerOptions.rootDir === "string";
+  const map = (p: string, isFile: boolean) => {
+    if (!isInside(layout.srcDir, p)) return p;
+    const sub = path.relative(layout.srcDir, p);
+    const js = isFile ? sub.replace(/\.[cm]?ts$/, ".js") : sub;
+    const flat = path.join(layout.outDir, js);
+    const nested = path.join(layout.outDir, path.relative(root, layout.srcDir), js);
+    return !explicitRootDir && !fs.existsSync(flat) && fs.existsSync(nested) ? nested : flat;
+  };
+  const connection = paths.connection ? map(paths.connection, true) : null;
+  if (connection && !fs.existsSync(connection)) {
+    throw new CliError(`No compiled database connection module at ${rel(connection)}. Run megh build first.`);
+  }
+  const migrations = map(paths.migrations, false);
+  if (!fs.existsSync(migrations)) {
+    throw new CliError(`No compiled migrations at ${rel(migrations)}. Run megh build first.`);
+  }
+  return { connection, settings: paths.settings, migrations, seeders: map(paths.seeders, false) };
+}
+
+/** Use the built app: asked for, or there are no sources to compile. */
+function useBuilt(root: string, opts: MigrateOptions): boolean {
+  if (opts.compiled) return true;
+  if (opts.compiled === false) return false;
+  const layout = projectLayout(root, true);
+  if (fs.existsSync(layout.srcDir) || !fs.existsSync(layout.outDir)) return false;
+  log.info(`No ${relTo(root, layout.srcDir)}/ folder: running the compiled files in ${relTo(root, layout.outDir)}/.`);
+  return true;
+}
+
 function compiled(root: string) {
   const layout = projectLayout(root);
   const paths = databasePaths(root);
-  const rel = (p: string) => path.relative(root, p).split(path.sep).join("/");
+  const rel = (p: string) => relTo(root, p);
   if (paths.connection && !fs.existsSync(paths.connection)) {
     throw new CliError(
       `No database connection module at ${rel(paths.connection)}.\n` +
@@ -121,10 +181,7 @@ function compiled(root: string) {
 
   const cacheDir = path.join(root, "node_modules", ".cache", "megh", "migrate");
   fs.rmSync(cacheDir, { recursive: true, force: true });
-  const inside = (dir: string, file: string) => {
-    const r = path.relative(dir, file);
-    return !r.startsWith("..") && !path.isAbsolute(r);
-  };
+  const inside = isInside;
 
   const app = new SwcCompiler(layout.srcDir, path.join(cacheDir, "app"), layout.compilerOptions);
   const failures = app.compileAll();
@@ -162,7 +219,7 @@ function compiled(root: string) {
 /** Run a migration action in a child process and return its result. */
 export function runMigrations(action: MigrateAction, opts: MigrateOptions & SeedOptions = {}): any {
   const root = requireProjectRoot(opts.cwd ?? process.cwd());
-  const files = compiled(root);
+  const files = useBuilt(root, opts) ? builtPaths(root) : compiled(root);
   const args =
     action === "rollback" ? [opts.step ?? 1] : action === "seed" ? [opts.seeder ?? null, opts.force === true] : [];
   const result = spawnSync(

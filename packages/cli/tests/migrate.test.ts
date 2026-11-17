@@ -192,6 +192,42 @@ describe("migrate commands", () => {
     expect(tables()).toEqual(["users"]);
   });
 
+  const writeBuiltMigration = (dir: string, name: string, table: string) => {
+    fs.mkdirSync(dir, { recursive: true });
+    fs.writeFileSync(
+      path.join(dir, `${name}.js`),
+      [
+        "exports.default = {",
+        `  async up(db) { await db.schema.createTable("${table}").addColumn("id", "integer").execute(); },`,
+        `  async down(db) { await db.schema.dropTable("${table}").execute(); },`,
+        "};",
+      ].join("\n"),
+    );
+  };
+
+  it("runs the built migrations when there is no src/ folder (#107)", async () => {
+    fs.rmSync(path.join(root, "src"), { recursive: true, force: true });
+    writeBuiltMigration(path.join(root, "dist", "database", "migrations"), "20260101000000_create_users_table", "users");
+
+    expect(await runCli(["migrate"], { cwd: root })).toBe(0);
+    expect(tables()).toEqual(["users"]);
+    expect(out.join("\n")).toContain("running the compiled files in dist/");
+    expect(fs.existsSync(path.join(root, "node_modules", ".cache", "megh", "migrate"))).toBe(false);
+  });
+
+  it("--compiled reads the outDir from tsconfig, also nested under src/ (#107)", async () => {
+    fs.writeFileSync(path.join(root, "tsconfig.json"), JSON.stringify({ compilerOptions: { outDir: "build" } }));
+    writeBuiltMigration(path.join(root, "build", "src", "database", "migrations"), "20260101000000_create_posts_table", "posts");
+
+    expect(await runCli(["migrate", "--compiled"], { cwd: root })).toBe(0);
+    expect(tables()).toEqual(["posts"]);
+  });
+
+  it("--compiled explains a missing build (#107)", async () => {
+    expect(await runCli(["migrate", "--compiled"], { cwd: root })).toBe(1);
+    expect(err.join("\n")).toContain("Run megh build first");
+  });
+
   it("takes settings from megh.database in package.json", async () => {
     fs.writeFileSync(path.join(root, ".env"), "");
     fs.writeFileSync(

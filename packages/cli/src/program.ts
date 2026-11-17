@@ -178,36 +178,39 @@ export function createProgram(run: RunOptions = {}): { program: Command; exitCod
 
   // ── Database ────────────────────────────────────────────────────────────
   const db = (name: string, description: string) =>
-    sub(name, description).addHelpText(
-      "after",
-      "\nConnects the way app.useMeghORM() does: from DATABASE_URL (or DB_DIALECT, DB_HOST,\n" +
-        "DB_NAME, ...) in the environment or .env, with optional settings in megh.database in\n" +
-        "package.json. Migrations live in src/database/migrations; set megh.migrations to\n" +
-        "change it. Sources are compiled with SWC first.",
-    );
+    sub(name, description)
+      .option("--compiled", "Run the built .js files from the tsconfig outDir instead of compiling src/")
+      .addHelpText(
+        "after",
+        "\nConnects the way app.useMeghORM() does: from DATABASE_URL (or DB_DIALECT, DB_HOST,\n" +
+          "DB_NAME, ...) in the environment or .env, with optional settings in megh.database in\n" +
+          "package.json. Migrations live in src/database/migrations; set megh.migrations to\n" +
+          "change it. Sources are compiled with SWC first; with --compiled (or when there is no\n" +
+          "src/ folder, as in a production image) the output of megh build runs instead.",
+      );
 
   db("migrate", "Run pending migrations")
     .option("--seed", "Run the seeders afterwards (see db:seed)")
     .option("--force", "With --seed: seed even when NODE_ENV is production")
     .action((o) => {
-      migrate({ cwd: cwd(), seed: o.seed, force: o.force });
+      migrate({ cwd: cwd(), seed: o.seed, force: o.force, compiled: o.compiled });
     });
 
   db("migrate:rollback", "Undo the last migration (or the last --step n)")
     .option("--step <n>", "Number of migrations to undo", parseInteger, 1)
     .action((o) => {
-      migrateRollback({ cwd: cwd(), step: o.step });
+      migrateRollback({ cwd: cwd(), step: o.step, compiled: o.compiled });
     });
 
-  db("migrate:reset", "Undo every migration").action(() => {
-    migrateReset({ cwd: cwd() });
+  db("migrate:reset", "Undo every migration").action((o) => {
+    migrateReset({ cwd: cwd(), compiled: o.compiled });
   });
 
   db("migrate:refresh", "Undo every migration, then run them all again")
     .option("--seed", "Run the seeders afterwards (see db:seed)")
     .option("--force", "With --seed: seed even when NODE_ENV is production")
     .action((o) => {
-      migrateRefresh({ cwd: cwd(), seed: o.seed, force: o.force });
+      migrateRefresh({ cwd: cwd(), seed: o.seed, force: o.force, compiled: o.compiled });
     });
 
   db("db:seed", "Fill the database: run the database seeder, or every seeder in file order")
@@ -221,13 +224,13 @@ export function createProgram(run: RunOptions = {}): { program: Command; exitCod
         "throws, nothing is saved.",
     )
     .action((o) => {
-      dbSeed({ cwd: cwd(), seeder: o.seeder, force: o.force });
+      dbSeed({ cwd: cwd(), seeder: o.seeder, force: o.force, compiled: o.compiled });
     });
 
   db("migrate:status", "Show which migrations have run")
     .option("--json", "Print JSON")
     .action((o) => {
-      migrateStatus({ cwd: cwd(), json: o.json });
+      migrateStatus({ cwd: cwd(), json: o.json, compiled: o.compiled });
     });
 
   sub("make:migration", "Create a migration in src/database/migrations/<timestamp>_<name>.ts")

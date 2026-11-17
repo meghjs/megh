@@ -7,7 +7,8 @@ import { findTsConfig, readTsConfig } from "../utils/tsconfig";
 export type CheckStatus = "ok" | "warn" | "fail";
 export type Check = { name: string; status: CheckStatus; detail: string };
 
-const MIN_NODE_MAJOR = 20;
+// Matches "engines.node" in @meghjs/core and @meghjs/cli.
+const MIN_NODE_MAJOR = 22;
 
 const major = (v: string) => Number(v.replace(/^[^\d]*/, "").split(".")[0]);
 const minor = (v: string) => Number(v.replace(/^[^\d]*/, "").split(".")[1] ?? 0);

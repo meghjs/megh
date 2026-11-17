@@ -190,21 +190,26 @@ systemd sends `SIGTERM` on stop and waits 90 seconds by default.
 Run migrations once per deploy, before the new version takes traffic, for
 example as a release step, a Kubernetes `Job` or an init container.
 
-`megh migrate` works, but it compiles `src/` with SWC each time. It needs the
-sources, `tsconfig.json`, `@meghjs/cli` and a writable `node_modules/.cache`,
-so run it where those exist (the build stage, a CI job), with `DATABASE_URL`
-set. See [Database Commands](/cli/database).
+In the runtime image, run the built migrations with `megh migrate
+--compiled`. It loads the `.js` files from `dist/` (the tsconfig `outDir`),
+so it needs `@meghjs/cli` installed but not the sources or a writable
+`node_modules`. Without a `src/` folder this is the default, so plain
+`megh migrate` works there too. Set `DATABASE_URL`. See
+[Database Commands](/cli/database).
 
 ```bash
-npx megh migrate
-npx megh migrate:status
+npx megh migrate --compiled
+npx megh migrate:status --compiled
 ```
+
+Where the sources are available (the build stage, a CI job), `megh migrate`
+compiles `src/` with SWC instead.
 
 `megh migrate --seed` and `megh db:seed` refuse to seed when
 `NODE_ENV=production` unless you add `--force`.
 
-To migrate from the runtime image instead, compile a small script with the
-app. It uses the same connection settings as `useMeghORM()`:
+To migrate without `@meghjs/cli` in the image, compile a small script with
+the app. It uses the same connection settings as `useMeghORM()`:
 
 ```ts [src/migrate.ts]
 import path from 'path';
