@@ -213,6 +213,14 @@ Things to know:
   Megh does not close a client you pass in. For another backend, implement
   `RateLimitStore` (`hit(key, windowMs)` returns `{ count, resetAt }`) and pass
   it as `store`.
+- **IPv6 clients** are counted per `/64` network, because one host usually
+  owns a whole `/64` and could rotate addresses inside it to dodge the limit.
+  Change it with `ipv6Subnet` (`128` counts each address). IPv4 is counted
+  per address.
+- **The memory store holds at most 100,000 clients.** Past that it drops the
+  oldest windows first and logs a warning once, so a flood of new addresses
+  can't exhaust memory. Dropped clients start a fresh count. Raise the cap
+  with `store: new MemoryRateLimitStore({ maxKeys: 500_000 })`, or use Redis.
 - **If the store fails** (Redis is down), requests get 500. Set
   `failOpen: true` to let them through instead; the error is still logged.
 - `/health` and `/ready` from `useHealth()` are never limited, so probes keep

@@ -466,12 +466,13 @@ Guide: [Security Hardening](/production/security#add-security-headers).
 | `StrictTransportSecurityOptions` | type | `{ maxAge?: number; includeSubDomains?: boolean; preload?: boolean }`. |
 | `ReferrerPolicy` | type | A `Referrer-Policy` token, such as `"no-referrer"`. |
 | `RateLimit` | decorator | `@RateLimit(options: RouteRateLimitOptions \| false)`. A controller's or route's own limit and counter, or `false` for none. Works without `useRateLimit()`. |
-| `RateLimitOptions` | type | `{ max?, window?, key?, skip?, store?, redis?, headers?, message?, failOpen?, global? }` for `useRateLimit()`. |
+| `RateLimitOptions` | type | `{ max?, window?, key?, ipv6Subnet?, skip?, store?, redis?, headers?, message?, failOpen?, global? }` for `useRateLimit()`. `ipv6Subnet` (default 64) groups IPv6 clients by prefix with the default key. |
 | `RouteRateLimitOptions` | type | `{ max?: number; window?: RateLimitWindow; key?: (req) => string \| Promise<string> }`. |
 | `RateLimitWindow` | type | `number \| string`. Milliseconds, or a duration such as `'30s'`, `'15m'`, `'1 hour'`. |
 | `RateLimitStore` | interface | `{ hit(key, windowMs): RateLimitHit \| Promise<RateLimitHit>; reset?(key); close?() }`. Where counts live. |
 | `RateLimitHit` | type | `{ count: number; resetAt: number }`. `resetAt` is epoch milliseconds. |
-| `MemoryRateLimitStore` | class | The default store: fixed-window counts in memory, per process. |
+| `MemoryRateLimitStore` | class | The default store: fixed-window counts in memory, per process. `new MemoryRateLimitStore({ sweepIntervalMs?, maxKeys? })`; past `maxKeys` (default 100,000) the oldest windows are dropped. |
+| `rateLimitIpKey` | function | `rateLimitIpKey(ip, ipv6Subnet = 64)`. The default key: IPv4 per address, IPv6 per prefix. Use it in a custom `key` that falls back to the IP. |
 | `RedisRateLimitStore` | class | `new RedisRateLimitStore(redis, { prefix? })`. Counts in Redis, shared by replicas. Takes an ioredis client, which it does not close. |
 | `RedisEvalClient` | interface | The part of an ioredis client the Redis store uses: `eval` and `del`. |
 
