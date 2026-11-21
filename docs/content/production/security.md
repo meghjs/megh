@@ -213,6 +213,9 @@ Things to know:
   Megh does not close a client you pass in. For another backend, implement
   `RateLimitStore` (`hit(key, windowMs)` returns `{ count, resetAt }`) and pass
   it as `store`.
+- A route's own limit (`@RateLimit`) is one counter per handler. With URI
+  versioning, `/v1/login` and `/v2/login` share it, so `@Version(['1', '2'])`
+  doesn't double the attempts a client gets.
 - **IPv6 clients** are counted per `/64` network, because one host usually
   owns a whole `/64` and could rotate addresses inside it to dodge the limit.
   Change it with `ipv6Subnet` (`128` counts each address). IPv4 is counted

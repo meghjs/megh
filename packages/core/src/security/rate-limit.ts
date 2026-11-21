@@ -88,6 +88,19 @@ export interface RateLimitOptions extends RouteRateLimitOptions {
 
 /** Route config key holding a route's own limit, or `false` to skip limiting. */
 export const RATE_LIMIT_CONFIG_KEY = "meghRateLimit";
+/**
+ * Route config key holding the id a route's own counter is scoped by. One
+ * handler registered under several URLs (URI versioning) shares one id, so
+ * `/v1/login` and `/v2/login` share one count.
+ */
+export const RATE_LIMIT_ROUTE_ID_KEY = "meghRateLimitRouteId";
+
+let routeIds = 0;
+/** A fresh id for one handler's rate-limit counter. */
+export function nextRateLimitRouteId(label: string): string {
+  return `${label}#${++routeIds}`;
+}
+
 /** Metadata key for `@RateLimit()`. */
 export const RATE_LIMIT_META_KEY = "megh:rate-limit";
 
@@ -457,7 +470,12 @@ export function installRateLimit(
             ? parseWindow(own.window)
             : appLimit.windowMs,
         key: own.key ?? appLimit.key,
-        scope: `${request.method}:${request.routeOptions.url}|`,
+        // Scope on the handler, not the URL: a handler under several URLs
+        // (URI versioning) must not get one counter per URL.
+        scope: `${
+          (config[RATE_LIMIT_ROUTE_ID_KEY] as string | undefined) ??
+          `${request.method}:${request.routeOptions.url}`
+        }|`,
       };
     } else if (config[SKIP_GLOBAL_MIDDLEWARE] || !limitAll) {
       // Health probes must answer even when a client is over its limit.

@@ -36,6 +36,8 @@ import {
 import { getDeclaredFilters } from "../errors/exception-filter";
 import {
   RATE_LIMIT_CONFIG_KEY,
+  RATE_LIMIT_ROUTE_ID_KEY,
+  nextRateLimitRouteId,
   RouteRateLimitOptions,
   assertRouteRateLimit,
   getDeclaredRateLimit,
@@ -711,6 +713,10 @@ export class MeghRouter {
 
       const _rateLimit = getDeclaredRateLimit(ctrl.constructor, method);
       if (_rateLimit) this.hasRouteRateLimits = true;
+      // Shared by every URL this handler is registered under.
+      const _rateLimitId = _rateLimit
+        ? nextRateLimitRouteId(`${ctrl.constructor.name}.${method}`)
+        : undefined;
 
       // DTOs with Megh's decorators use Megh's validator. class-validator
       // DTOs use class-validator, or (experimental flag) a validator compiled
@@ -747,6 +753,7 @@ export class MeghRouter {
             ...(_rateLimit !== undefined && {
               [RATE_LIMIT_CONFIG_KEY]: _rateLimit,
             }),
+            ...(_rateLimitId && { [RATE_LIMIT_ROUTE_ID_KEY]: _rateLimitId }),
           },
           handler: async (req, res) => {
             let reqClone = req as unknown as IRequest;
@@ -1110,7 +1117,12 @@ export class MeghRouter {
         url: this.routeTargets(r, undefined)[0].url,
         schema: routeSchema,
         ...(value.rateLimit !== undefined && {
-          config: { [RATE_LIMIT_CONFIG_KEY]: value.rateLimit },
+          config: {
+            [RATE_LIMIT_CONFIG_KEY]: value.rateLimit,
+            ...(value.rateLimit && {
+              [RATE_LIMIT_ROUTE_ID_KEY]: nextRateLimitRouteId(`${m} ${r}`),
+            }),
+          },
         }),
         // Same order as controller routes: middleware → authentication →
         // authorization → handler.

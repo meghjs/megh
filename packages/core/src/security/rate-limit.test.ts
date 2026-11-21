@@ -5,6 +5,7 @@ import type { MeghApplicationOptions } from "../core/interfaces";
 import { LoggerService } from "../observability/logger";
 import { ApiController } from "../http/controller";
 import { Get, Post } from "../http/route-methods";
+import { Version } from "../http/versioning";
 import {
   MemoryRateLimitStore,
   RateLimit,
@@ -398,6 +399,53 @@ describe("IPv6 grouping (#135)", () => {
     await expect(
       boot((a) => a.useRateLimit({ ipv6Subnet: 0 })),
     ).rejects.toThrow(/ipv6Subnet/);
+  });
+});
+
+describe("rate limits with URI versioning (#136)", () => {
+  @ApiController("/auth")
+  class VersionedController {
+    @Version(["1", "2"])
+    @RateLimit({ max: 2 })
+    @Post("/login")
+    login() {
+      return { ok: true };
+    }
+
+    @Version(["1", "2"])
+    @RateLimit({ max: 2 })
+    @Post("/other")
+    other() {
+      return { ok: true };
+    }
+  }
+
+  const versioned = () =>
+    boot((a) => a.useVersioning({ type: "uri" }), [VersionedController]);
+  const post = (app: MeghApplication, url: string) =>
+    hit(app, url, "POST", "198.51.100.7");
+
+  it("shares one counter across the versions of a handler", async () => {
+    const app = await versioned();
+    expect((await post(app, "/v1/auth/login")).statusCode).toBe(200);
+    expect((await post(app, "/v2/auth/login")).statusCode).toBe(200);
+    expect((await post(app, "/v1/auth/login")).statusCode).toBe(429);
+    expect((await post(app, "/v2/auth/login")).statusCode).toBe(429);
+  });
+
+  it("keeps different handlers apart", async () => {
+    const app = await versioned();
+    await post(app, "/v1/auth/login");
+    await post(app, "/v2/auth/login");
+    expect((await post(app, "/v1/auth/other")).statusCode).toBe(200);
+  });
+
+  it("keeps the same handler in two apps apart", async () => {
+    const one = await versioned();
+    const two = await versioned();
+    await post(one, "/v1/auth/login");
+    await post(one, "/v1/auth/login");
+    expect((await post(two, "/v1/auth/login")).statusCode).toBe(200);
   });
 });
 
