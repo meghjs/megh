@@ -21,6 +21,7 @@ import {
 } from "./index";
 import { attachmentBytes, formatAddress } from "./http-transports";
 import { buildMessage } from "./mailer";
+import { toNodemailerMessage } from "./transports";
 
 type Call = { url: string; init: RequestInit };
 let calls: Call[];
@@ -578,4 +579,125 @@ describe("one address stays one recipient (#134)", () => {
       expect(calls).toHaveLength(0);
     });
   }
+});
+
+describe("attachment access (#139)", () => {
+  class PathMail extends Mailable {
+    constructor(private readonly file: string) {
+      super();
+    }
+    content() {
+      return { text: "see attached" };
+    }
+    attachments(): MailAttachment[] {
+      return [{ path: this.file }];
+    }
+  }
+
+  let dir: string;
+  beforeEach(() => {
+    dir = fs.mkdtempSync(path.join(os.tmpdir(), "megh-attach-"));
+    fs.mkdirSync(path.join(dir, "root"));
+    fs.writeFileSync(path.join(dir, "root", "invoice.pdf"), "PDF");
+    fs.writeFileSync(path.join(dir, "secret.txt"), "secret");
+  });
+  afterEach(() => fs.rmSync(dir, { recursive: true, force: true }));
+
+  const send = (file: string, config = {}) => {
+    Mailer.configure({ default: "array", from: "shop@x.io", ...config });
+    return new Mailer().to("ann@x.io").send(new PathMail(file));
+  };
+
+  it("refuses URL attachments by default, before fetching anything", async () => {
+    await expect(
+      send("http://169.254.169.254/latest/meta-data/"),
+    ).rejects.toThrow(/URL attachments are off/);
+    await expect(send("HTTPS://cdn.x.io/a.pdf")).rejects.toThrow(MailError);
+    expect(calls).toHaveLength(0);
+  });
+
+  it("allows URL attachments with allowUrlAccess, but only http(s)", async () => {
+    const sent = await send("https://cdn.x.io/a.pdf", { allowUrlAccess: true });
+    expect(sent.message.attachments[0].path).toBe("https://cdn.x.io/a.pdf");
+    await expect(
+      send("ftp://x.io/a.pdf", { allowUrlAccess: true }),
+    ).rejects.toThrow(/http\(s\) URL/);
+  });
+
+  it("allows files by default, and refuses them with allowFileAccess: false", async () => {
+    const file = path.join(dir, "secret.txt");
+    expect((await send(file)).message.attachments[0].path).toBe(file);
+    await expect(send(file, { allowFileAccess: false })).rejects.toThrow(
+      /file attachments are off/,
+    );
+  });
+
+  it("confines files to attachmentRoot", async () => {
+    const root = path.join(dir, "root");
+    const sent = await send("invoice.pdf", { attachmentRoot: root });
+    expect(sent.message.attachments[0].path).toBe(
+      fs.realpathSync(path.join(root, "invoice.pdf")),
+    );
+    for (const escape of [
+      "../secret.txt",
+      path.join(dir, "secret.txt"),
+      "/etc/passwd",
+    ]) {
+      await expect(send(escape, { attachmentRoot: root })).rejects.toThrow(
+        /outside the attachment root/,
+      );
+    }
+    await expect(send("missing.pdf", { attachmentRoot: root })).rejects.toThrow(
+      /was not found/,
+    );
+  });
+
+  it("doesn't follow a symlink out of attachmentRoot", async () => {
+    const root = path.join(dir, "root");
+    try {
+      fs.symlinkSync(path.join(dir, "secret.txt"), path.join(root, "link.txt"));
+    } catch {
+      return; // symlinks need extra rights on Windows
+    }
+    await expect(send("link.txt", { attachmentRoot: root })).rejects.toThrow(
+      /outside the attachment root/,
+    );
+  });
+
+  it("keeps content and data: attachments working with every access off", async () => {
+    Mailer.configure({
+      default: "array",
+      from: "shop@x.io",
+      allowFileAccess: false,
+      allowUrlAccess: false,
+    });
+    const sent = await new Mailer().to("ann@x.io").send(new InvoiceMail());
+    expect(sent.message.attachments).toHaveLength(2);
+    await expect(
+      send("data:text/plain;base64,aGk=", { allowFileAccess: false }),
+    ).resolves.toBeDefined();
+  });
+
+  it("tells Nodemailer to refuse files and URLs too", () => {
+    const base = {
+      from: { address: "a@x.io" },
+      to: [],
+      cc: [],
+      bcc: [],
+      replyTo: [],
+      subject: "s",
+      attachments: [],
+      headers: {},
+    };
+    expect(toNodemailerMessage(base)).toMatchObject({
+      disableFileAccess: false,
+      disableUrlAccess: true,
+    });
+    expect(
+      toNodemailerMessage(base, {
+        allowFileAccess: false,
+        allowUrlAccess: true,
+      }),
+    ).toMatchObject({ disableFileAccess: true, disableUrlAccess: false });
+  });
 });

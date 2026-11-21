@@ -710,7 +710,7 @@ Guide: [Mail](/advanced/mail).
 | `PendingMail` | class | Returned by `mailer.to()`: add recipients, then `send()`, `queue()` or `later()`. |
 | `MailFake` | class | Returned by `Mailer.fake()`. `assertSent`, `assertNotSent`, `assertNothingSent`, `assertSentCount`, `assertQueued`, `assertNotQueued`, `assertNothingQueued`, `sentOf`, `queuedOf`, `sent`, `queued`, `restore`. |
 | `SentMail` | class | A recorded message: `mailer`, `mailable`, `message`, `delay`, `hasTo()`, `hasCc()`, `hasBcc()`, `hasFrom()`. |
-| `MailConfig` | interface | `{ default?, from?, mailers?, queue? }` for `useMail()`. |
+| `MailConfig` | interface | `{ default?, from?, mailers?, queue?, allowFileAccess?, allowUrlAccess?, attachmentRoot? }` for `useMail()`. URL attachments are off unless `allowUrlAccess` is `true`. |
 | `MailQueueConfig` | interface | `{ name?, adapter?, driver?, worker?, jobOptions? }`. |
 | `MailerConfig` | type | One mailer's settings: `{ transport: "smtp" \| "sendgrid" \| "mailgun" \| "postmark" \| "resend" \| "failover" \| "log" \| "array", ... }`, or a `MailTransport`. |
 | `MailTransport` | interface | `{ send(message: MailMessage): Promise<{ messageId?, response? } \| void>; close?() }`. Implement it for your own mailer. |

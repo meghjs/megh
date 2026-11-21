@@ -1,7 +1,10 @@
 import { Injectable } from "../di";
 import type { Constructor } from "../common/utils/common-utils";
+import { resolveRealWithin } from "../common/utils/path-utils";
 import {
+  DEFAULT_ATTACHMENT_ACCESS,
   mailerProblem,
+  type AttachmentAccess,
   resolveMailConfig,
   type FailoverMailerConfig,
   type MailConfig,
@@ -26,6 +29,7 @@ import {
 import type {
   MailAddress,
   MailAddressLike,
+  MailAttachment,
   MailMessage,
   MailTransport,
   MailTransportResult,
@@ -171,7 +175,12 @@ export class Mailer {
     mailable: Mailable,
   ): Promise<SentMessage> {
     const { name, config } = Mailer.resolve(mailerName);
-    const message = await buildMessage(mailable, recipients, config.from);
+    const message = await buildMessage(
+      mailable,
+      recipients,
+      config.from,
+      config.attachments,
+    );
     if (Mailer.current) {
       Mailer.current.record(new SentMail(name, mailable, message));
       return { mailer: name, message };
@@ -188,7 +197,12 @@ export class Mailer {
     delay: number,
   ): Promise<QueuedMessage> {
     const { name, config } = Mailer.resolve(mailerName);
-    const message = await buildMessage(mailable, recipients, config.from);
+    const message = await buildMessage(
+      mailable,
+      recipients,
+      config.from,
+      config.attachments,
+    );
     if (Mailer.current) {
       Mailer.current.recordQueued(new SentMail(name, mailable, message, delay));
       return { mailer: name, message, delay };
@@ -218,7 +232,7 @@ export class Mailer {
     const { config } = Mailer.resolve(name);
     let transport = Mailer.transports.get(name);
     if (!transport) {
-      transport = createTransport(name, config.mailers);
+      transport = createTransport(name, config.mailers, config.attachments);
       Mailer.transports.set(name, transport);
     }
     return transport.send(message);
@@ -242,6 +256,7 @@ export class Mailer {
 function createTransport(
   name: string,
   mailers: Record<string, MailerConfig>,
+  access: AttachmentAccess,
 ): MailTransport {
   const problem = mailerProblem(name, mailers);
   if (problem) throw new MailError(`The mailer ${problem}`);
@@ -250,7 +265,7 @@ function createTransport(
   const c = config as Exclude<MailerConfig, MailTransport>;
   switch (c.transport) {
     case "smtp":
-      return new SmtpTransport(c);
+      return new SmtpTransport(c, access);
     case "log":
       return new LogTransport();
     case "array":
@@ -350,6 +365,7 @@ export async function buildMessage(
   mailable: Mailable,
   recipients: Recipients,
   defaultFrom?: MailAddressLike,
+  access: AttachmentAccess = DEFAULT_ATTACHMENT_ACCESS,
 ): Promise<MailMessage> {
   const [envelope, content, attachments] = await Promise.all([
     mailable.envelope(),
@@ -370,7 +386,7 @@ export async function buildMessage(
     bcc: [...recipients.bcc, ...toAddresses([envelope.bcc])],
     replyTo: toAddresses([envelope.replyTo]),
     subject: envelope.subject ?? headline(label),
-    attachments: attachments ?? [],
+    attachments: await checkAttachments(attachments ?? [], access, label),
     headers: { ...envelope.headers },
   };
   if (content?.html !== undefined) message.html = content.html;
@@ -389,6 +405,56 @@ export async function buildMessage(
     assertSingleLine(`${label} header "${key}"`, `${key}${value}`);
   }
   return message;
+}
+
+/**
+ * Check each attachment `path` against what the config allows, before any
+ * transport reads it. A path can come from user input (`{ path: dto.file }`),
+ * and would otherwise read any local file or fetch any URL, including cloud
+ * metadata, and mail it out.
+ */
+async function checkAttachments(
+  attachments: MailAttachment[],
+  access: AttachmentAccess,
+  label: string,
+): Promise<MailAttachment[]> {
+  return Promise.all(
+    attachments.map(async (attachment) => {
+      const target = attachment.path;
+      if (target === undefined || target === "") return attachment;
+      const what = `${label} attachment "${attachment.filename ?? target}"`;
+      if (/^data:/i.test(target)) return attachment;
+      if (/^[a-z][a-z\d+.-]*:\/\//i.test(target)) {
+        if (!access.allowUrlAccess) {
+          throw new MailError(
+            `${what} is a URL, and URL attachments are off. Pass allowUrlAccess: true to app.useMail() to allow them, or attach the content instead.`,
+          );
+        }
+        if (!/^https?:\/\//i.test(target)) {
+          throw new MailError(`${what} must be an http(s) URL.`);
+        }
+        return attachment;
+      }
+      if (!access.allowFileAccess) {
+        throw new MailError(
+          `${what} is a file path, and file attachments are off (allowFileAccess: false). Attach the content instead.`,
+        );
+      }
+      if (access.attachmentRoot === undefined) return attachment;
+      let real: string | null;
+      try {
+        real = await resolveRealWithin(access.attachmentRoot, target);
+      } catch {
+        throw new MailError(`${what} was not found.`);
+      }
+      if (!real) {
+        throw new MailError(
+          `${what} is outside the attachment root (${access.attachmentRoot}).`,
+        );
+      }
+      return { ...attachment, path: real };
+    }),
+  );
 }
 
 /**

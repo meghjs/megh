@@ -1,5 +1,9 @@
 import { internalLogger } from "../observability/internal-logger";
-import type { SmtpMailerConfig } from "./config";
+import {
+  DEFAULT_ATTACHMENT_ACCESS,
+  type AttachmentAccess,
+  type SmtpMailerConfig,
+} from "./config";
 import { MailError } from "./errors";
 import { requireOptional } from "../common/utils/optional-peer";
 import type { MailMessage, MailTransport, MailTransportResult } from "./types";
@@ -41,11 +45,16 @@ export function smtpTransportOptions(
 /** The message in the shape Nodemailer's `sendMail()` takes. */
 export function toNodemailerMessage(
   message: MailMessage,
+  access: AttachmentAccess = DEFAULT_ATTACHMENT_ACCESS,
 ): Record<string, unknown> {
   const out: Record<string, unknown> = {
     from: message.from,
     to: message.to,
     subject: message.subject,
+    // A second layer behind the Mailer's own check, for messages that reach
+    // the transport another way.
+    disableFileAccess: !access.allowFileAccess,
+    disableUrlAccess: !access.allowUrlAccess,
   };
   if (message.cc.length) out.cc = message.cc;
   if (message.bcc.length) out.bcc = message.bcc;
@@ -61,13 +70,18 @@ export function toNodemailerMessage(
 export class SmtpTransport implements MailTransport {
   private transporter: any;
 
-  constructor(private readonly config: SmtpMailerConfig) {}
+  constructor(
+    private readonly config: SmtpMailerConfig,
+    private readonly access: AttachmentAccess = DEFAULT_ATTACHMENT_ACCESS,
+  ) {}
 
   async send(message: MailMessage): Promise<MailTransportResult> {
     this.transporter ??= requireNodemailer().createTransport(
       smtpTransportOptions(this.config),
     );
-    const info = await this.transporter.sendMail(toNodemailerMessage(message));
+    const info = await this.transporter.sendMail(
+      toNodemailerMessage(message, this.access),
+    );
     return { messageId: info?.messageId, response: info };
   }
 

@@ -15,6 +15,7 @@ export {
   type PostmarkMailerConfig,
   type ResendMailerConfig,
   type FailoverMailerConfig,
+  type AttachmentAccess,
   mailerProblem,
 } from "./config";
 export {

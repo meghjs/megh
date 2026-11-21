@@ -41,6 +41,24 @@ export const DEFAULT_ALLOWED_UPLOAD_EXTENSIONS: readonly string[] = [
 ];
 
 /**
+ * Resolve `target` inside `baseDir` following symlinks, and return its real
+ * path, or `null` when it, or a symlink on the way, leads outside `baseDir`.
+ * Throws (ENOENT) when the target doesn't exist.
+ */
+export async function resolveRealWithin(
+  baseDir: string,
+  target: string,
+): Promise<string | null> {
+  const candidate = resolveWithin(baseDir, target);
+  if (!candidate) return null;
+  const [real, realBase] = await Promise.all([
+    fs.promises.realpath(candidate),
+    fs.promises.realpath(baseDir),
+  ]);
+  return resolveWithin(realBase, real) ? real : null;
+}
+
+/**
  * Resolve `target` against `baseDir` and return the absolute path, or `null`
  * when the result escapes `baseDir`. Unlike a plain `startsWith(baseDir)`
  * check, a sibling such as `<baseDir>-evil` is rejected.

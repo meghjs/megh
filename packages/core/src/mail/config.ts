@@ -1,3 +1,4 @@
+import path from "path";
 import type { JobsOptions, QueueOptions } from "bullmq";
 import { Environment } from "../config/environment-variables";
 import type { QueueDriver } from "../queue/memory-driver";
@@ -111,7 +112,37 @@ export interface MailConfig {
    * The queue's worker starts when this is set, unless `worker: false`.
    */
   queue?: boolean | MailQueueConfig;
+  /**
+   * Let attachments read a local file given as `path`. Defaults to `true`.
+   * Turn it off when attachments are built from user input, or confine
+   * paths with `attachmentRoot`.
+   */
+  allowFileAccess?: boolean;
+  /**
+   * Let attachments download an `http(s)://` URL given as `path`. Defaults to
+   * `false`: a URL from user input could reach internal services or cloud
+   * metadata (`169.254.169.254`) and mail the response out.
+   */
+  allowUrlAccess?: boolean;
+  /**
+   * Only read attachment files inside this folder. Relative paths resolve
+   * against it, and symlinks can't lead out of it.
+   */
+  attachmentRoot?: string;
 }
+
+/** What an attachment `path` may read. */
+export interface AttachmentAccess {
+  allowFileAccess: boolean;
+  allowUrlAccess: boolean;
+  attachmentRoot?: string;
+}
+
+/** Files on, URLs off, no root. */
+export const DEFAULT_ATTACHMENT_ACCESS: AttachmentAccess = {
+  allowFileAccess: true,
+  allowUrlAccess: false,
+};
 
 /** Where queued mail goes, and how it is retried. */
 export interface MailQueueConfig {
@@ -143,6 +174,8 @@ export interface ResolvedMailConfig {
   mailers: Record<string, MailerConfig>;
   /** Set when queueing is on. */
   queue?: MailQueueConfig;
+  /** What attachment paths may read. */
+  attachments: AttachmentAccess;
 }
 
 const ENCRYPTIONS = ["ssl", "tls", "none"] as const;
@@ -267,6 +300,15 @@ export function resolveMailConfig(
     from: options.from ?? env.from,
     mailers,
     ...(queue ? { queue } : {}),
+    attachments: {
+      allowFileAccess:
+        options.allowFileAccess ?? DEFAULT_ATTACHMENT_ACCESS.allowFileAccess,
+      allowUrlAccess:
+        options.allowUrlAccess ?? DEFAULT_ATTACHMENT_ACCESS.allowUrlAccess,
+      ...(options.attachmentRoot !== undefined && {
+        attachmentRoot: path.resolve(options.attachmentRoot),
+      }),
+    },
   };
 }
 
