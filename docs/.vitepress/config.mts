@@ -20,6 +20,7 @@ export default defineConfig({
       },
       { text: 'Database', link: '/advanced/orm', activeMatch: '^/advanced/(orm|database)' },
       { text: 'CLI', link: '/cli/basic', activeMatch: '^/cli/' },
+      { text: 'AI', link: '/ai/mcp', activeMatch: '^/ai/' },
       { text: 'Reference', link: '/reference/api', activeMatch: '^/reference/' },
       {
         text: 'v0.6.5',
@@ -96,6 +97,10 @@ export default defineConfig({
       {
         text: 'Extending',
         items: [{ text: 'Plugins', link: '/advanced/plugins' }],
+      },
+      {
+        text: 'AI',
+        items: [{ text: 'MCP Server (coming soon)', link: '/ai/mcp' }],
       },
       {
         text: 'Production',
