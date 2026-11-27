@@ -5,7 +5,7 @@ description: "What changes in Megh 0.7.3, 0.7.2, 0.7.1 and 0.7.0: sessions, gate
 
 # Upgrading to 0.7
 
-Every `@meghjs` package shares one version number. Upgrade them together:
+The `@meghjs` packages share one version number. Upgrade them together:
 
 ```sh
 npm i @meghjs/core@~0.7.3

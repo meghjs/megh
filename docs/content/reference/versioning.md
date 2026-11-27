@@ -9,9 +9,9 @@ Megh follows [semantic versioning](https://semver.org): `MAJOR.MINOR.PATCH`.
 
 ## One version for every package
 
-Every `@meghjs` package (`core`, `cli`, `data`, `mcp` and `ai`) is released
-together and always has the same version number, even when only one of them
-changed. Use matching versions:
+Every `@meghjs` package (`core`, `cli`, `mcp` and `ai`) is released together
+and always has the same version number, even when only one of them changed.
+Use matching versions:
 
 ```json [package.json]
 {
@@ -19,6 +19,9 @@ changed. Use matching versions:
   "devDependencies": { "@meghjs/cli": "0.7.3" }
 }
 ```
+
+`@meghjs/data` is the exception: it is no longer released and stays at 0.7.2,
+which works with every 0.7 release of `@meghjs/core`.
 
 ## Before 1.0
 
