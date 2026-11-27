@@ -1,6 +1,6 @@
 ---
 title: Upgrading to 0.7
-description: "What changes in Megh 0.7.2, 0.7.1 and 0.7.0: LLM tools and an MCP server for your app (@meghjs/ai), AGENTS.md and llms.txt for coding agents, optional class-validator and class-transformer, a fuller ORM (constrained eager loading, upserts, model events, hidden columns, polymorphic relations), server-rendered views, the @meghjs/mcp server, deny-by-default authorization and the request context API."
+description: "What changes in Megh 0.7.3, 0.7.2, 0.7.1 and 0.7.0: sessions, gates and @auth/@can view directives, editor support for templates, LLM tools and an MCP server for your app (@meghjs/ai), AGENTS.md and llms.txt for coding agents, optional class-validator and class-transformer, a fuller ORM (constrained eager loading, upserts, model events, hidden columns, polymorphic relations), server-rendered views, the @meghjs/mcp server, deny-by-default authorization and the request context API."
 ---
 
 # Upgrading to 0.7
@@ -8,15 +8,24 @@ description: "What changes in Megh 0.7.2, 0.7.1 and 0.7.0: LLM tools and an MCP 
 Every `@meghjs` package shares one version number. Upgrade them together:
 
 ```sh
-npm i @meghjs/core@~0.7.2
-npm i -D @meghjs/cli@~0.7.2
-npm i @meghjs/ai@~0.7.2   # optional: LLM tools and an MCP server for your app
+npm i @meghjs/core@~0.7.3
+npm i -D @meghjs/cli@~0.7.3
+npm i @meghjs/ai@~0.7.3   # optional: LLM tools and an MCP server for your app
 ```
 
-0.7.2 has no breaking changes. It adds [`@meghjs/ai`](/ai/tools), which turns
-routes into LLM tools and serves them over MCP, and gives coding agents an
+0.7.3 adds [sessions](/advanced/sessions) for server-rendered apps, with a
+login redirect, gates and the `@auth`, `@guest`, `@can` and `@session` view
+directives, and [editor support](/getting-started/editors) for `.megh.html`
+templates in VS Code, Neovim and other LSP editors. See
+[New in 0.7.3](#new-in-0-7-3).
+
+It has one breaking change: `app.app`, the Fastify instance, is no longer
+public. Read [Breaking in 0.7.3](#breaking-in-0-7-3) if your code uses it.
+
+Coming from 0.7.1? 0.7.2 adds [`@meghjs/ai`](/ai/tools), which turns routes
+into LLM tools and serves them over MCP, and gives coding agents an
 `AGENTS.md` in new projects and [`/llms.txt`](https://meghjs.github.io/llms.txt)
-for the docs. See [New in 0.7.2](#new-in-0-7-2).
+for the docs. It has no breaking changes. See [New in 0.7.2](#new-in-0-7-2).
 
 Coming from 0.7.0? 0.7.1 makes class-validator and class-transformer optional and fills out the
 [ORM](/advanced/orm). It has a few breaking changes, which is unusual for a
@@ -27,6 +36,91 @@ Coming from 0.6.x? Read [Breaking in 0.7.0](#breaking-in-0-7-0) too.
 
 0.7 is the last minor release before 1.0. See the
 [versioning policy](/reference/versioning).
+
+## Breaking in 0.7.3
+
+### The Fastify instance is no longer public
+
+`app.app` is gone. Megh keeps the Fastify instance to itself, so an app can't
+change routing, hooks or error handling behind Megh's back.
+
+**Affects you if** your code or tests use `app.app`. Replace each use:
+
+| Before                            | After                                     |
+| --------------------------------- | ----------------------------------------- |
+| `app.app.register(plugin, opts)`  | `app.registerFastifyPlugin(plugin, opts)` |
+| `app.app.inject({ method, url })` | `app.inject({ method, url })`             |
+| `app.app.server.address()`        | `app.address()`                           |
+| `app.app.close()`                 | `app.close()`                             |
+
+`registerFastifyPlugin()` works before `run()` and inside `onInit()` hooks.
+Megh loads the plugins before it adds routes, so plugins that hook into
+routes see all of them. It throws once routes are mapped. Megh
+[plugins](/advanced/plugins) still get the instance as `ctx.http`. See
+[Fastify plugins](/getting-started/application#fastify-plugins).
+
+## New in 0.7.3
+
+### Sessions
+
+[`app.useSession()`](/advanced/sessions) adds cookie sessions. The cookie
+holds a random ID, signed with HMAC-SHA256, and the data stays on the server:
+in memory, in Redis (`redis: new Redis()`), or in your own `SessionStore`.
+
+- Inject the session with `@Session()`, or read it with `currentSession()`.
+  Views get it as `session`.
+- `flash()` keeps a value for the next request only, for messages after a
+  redirect.
+- Call `regenerate()` on login and `destroy()` on logout.
+- `secret` defaults to `SESSION_SECRET` and must be at least 32 characters.
+  An array of secrets rotates keys.
+
+There are no new dependencies.
+
+### Login redirect
+
+With `useSession({ loginPath: "/login" })`, a browser that hits a route
+needing a logged-in user is redirected to the login page instead of getting a
+401. A GET remembers its URL, and `session.intended("/")` sends the user back
+there after login. JSON and XHR requests keep the 401. See
+[Protecting pages](/advanced/sessions#protecting-pages).
+
+### Gates
+
+`app.defineGate(name, check)` defines a permission check for the logged-in
+user. Use it in code with `gate.allows()`, `gate.denies()` and
+`gate.authorize()` (401 for a guest, 403 when denied), and in views with
+`@can`. See [Gates](/advanced/sessions#gates).
+
+### View directives
+
+- `@auth` … `@endauth` and `@guest` … `@endguest`: logged in or not, from
+  `useAuthentication()`.
+- `@can('edit-post', post)` … `@endcan` and `@cannot(...)` … `@endcannot`:
+  gate checks.
+- `@session('status')` … `{{ value }}` … `@endsession`: a session value, such
+  as a flashed message.
+
+All of them except `@session` take `@else`. See [Views](/advanced/views#syntax).
+
+### Editor support for templates
+
+[Editor Setup](/getting-started/editors) covers the VS Code extension, the new
+Neovim plugin ([`megh.nvim`](https://github.com/meghjs/megh.nvim)), and the
+Megh language server for other LSP editors. They give highlighting,
+completion, hover, formatting and validation for `.megh.html` files. Typing
+`@` now completes directives, and block directives are inserted with their
+closing tag.
+
+### Other changes
+
+- `app.inject()` sends a request to the app in-process, for tests.
+  `app.address()` returns the address the server listens on, for example
+  after `run(0)`.
+- `megh new --pm pnpm` writes a `pnpm-workspace.yaml` that approves the build
+  scripts the project needs (`@swc/core`, and `better-sqlite3` for an ORM app
+  on SQLite). Without it, pnpm 10 skips building `better-sqlite3` and the app
+  crashes on its first query, and pnpm 12 fails the install.
 
 ## New in 0.7.2
 
