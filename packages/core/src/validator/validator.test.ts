@@ -539,7 +539,7 @@ describe("Megh DTOs over HTTP", () => {
   });
 
   afterAll(async () => {
-    await app.app.close();
+    await app.close();
     vi.restoreAllMocks();
   });
 
@@ -579,11 +579,11 @@ describe("Megh DTOs over HTTP", () => {
   it.each(requests)(
     "answers %s like the class-validator DTO",
     async (_label, request) => {
-      const viaCv = await app.app.inject({
+      const viaCv = await app.inject({
         ...request,
         url: "/cv" + request.url,
       });
-      const viaMegh = await app.app.inject({
+      const viaMegh = await app.inject({
         ...request,
         url: "/megh" + request.url,
       });
@@ -608,6 +608,6 @@ describe("Megh DTOs over HTTP", () => {
     await expect(mixed.run(0)).rejects.toThrow(
       /mixes @meghjs\/core validation decorators with class-validator/,
     );
-    await mixed.app.close().catch(() => {});
+    await mixed.close().catch(() => {});
   });
 });

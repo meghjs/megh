@@ -74,7 +74,7 @@ describe("Swagger UI page", () => {
   });
 
   afterEach(async () => {
-    await app?.app.close();
+    await app?.close();
     vi.restoreAllMocks();
   });
 
@@ -84,7 +84,7 @@ describe("Swagger UI page", () => {
     app.useControllers([PingController]);
     await app.run(0);
 
-    const init = await app.app.inject({
+    const init = await app.inject({
       method: "GET",
       url: "/swagger/static/swagger-initializer.js",
     });
@@ -93,11 +93,11 @@ describe("Swagger UI page", () => {
       "data:image/svg+xml;base64," + MEGH_LOGO_SVG_BASE64,
     );
 
-    const html = await app.app.inject({ method: "GET", url: "/swagger/" });
+    const html = await app.inject({ method: "GET", url: "/swagger/" });
     expect(html.body).toMatch(/href="\.\/static\/theme\/favicon\.ico"/);
     expect(html.body).not.toContain("favicon-32x32.png");
 
-    const icon = await app.app.inject({
+    const icon = await app.inject({
       method: "GET",
       url: "/swagger/static/theme/favicon.ico",
     });

@@ -73,7 +73,7 @@ describe("requestContext (#141)", () => {
 
   it("carries a value set in the request to a service, across awaits", async () => {
     const app = await tenantApp();
-    const res = await app.app.inject({
+    const res = await app.inject({
       url: "/tenant",
       headers: { "x-tenant": "acme", "x-request-id": "req-1" },
     });
@@ -85,7 +85,7 @@ describe("requestContext (#141)", () => {
     const tenants = ["a", "b", "c", "d", "e"];
     const results = await Promise.all(
       tenants.map((t) =>
-        app.app.inject({ url: "/tenant", headers: { "x-tenant": t } }),
+        app.inject({ url: "/tenant", headers: { "x-tenant": t } }),
       ),
     );
     expect(results.map((r) => r.json().tenant)).toEqual(tenants);
@@ -93,7 +93,7 @@ describe("requestContext (#141)", () => {
 
   it("works with request IDs turned off", async () => {
     const app = await tenantApp({ requestId: false });
-    const res = await app.app.inject({
+    const res = await app.inject({
       url: "/tenant",
       headers: { "x-tenant": "acme" },
     });
@@ -112,12 +112,12 @@ describe("requestContext (#141)", () => {
         };
       });
     });
-    const signedIn = await app.app.inject({
+    const signedIn = await app.inject({
       url: "/me",
       headers: { "x-user": "ann" },
     });
     expect(signedIn.json()).toEqual({ user: { name: "ann" }, typed: "ann" });
-    const anonymous = await app.app.inject({ url: "/me" });
+    const anonymous = await app.inject({ url: "/me" });
     expect(anonymous.json()).toEqual({ user: null, typed: null });
   });
 

@@ -2,6 +2,7 @@ import "reflect-metadata";
 import net from "node:net";
 import { afterEach, describe, expect, it, vi } from "vitest";
 import { MeghApplication } from "./application";
+import { fastifyOf } from "./internal";
 import { LoggerService } from "../observability/logger";
 
 const fakeLogger = () => ({
@@ -26,7 +27,7 @@ describe("application lifecycle", () => {
   it("runs init hooks in order before listening, and ready hooks after", async () => {
     const app = started(createApp());
     const calls: string[] = [];
-    const listening = () => app.app.server.listening;
+    const listening = () => fastifyOf(app).server.listening;
 
     app
       .onInit(() => {
@@ -57,7 +58,7 @@ describe("application lifecycle", () => {
 
     await expect(app.run(0)).rejects.toThrow("db down");
 
-    expect(app.app.server.listening).toBe(false);
+    expect(fastifyOf(app).server.listening).toBe(false);
     expect(ready).not.toHaveBeenCalled();
   });
 
@@ -78,7 +79,7 @@ describe("application lifecycle", () => {
     const calls: string[] = [];
     app
       .onClose(() => {
-        calls.push(`first listening=${app.app.server.listening}`);
+        calls.push(`first listening=${fastifyOf(app).server.listening}`);
       })
       .onClose(async () => {
         calls.push("second");
@@ -146,7 +147,7 @@ describe("run() port", () => {
       });
     });
   const boundPort = (app: MeghApplication) =>
-    (app.app.server.address() as net.AddressInfo).port;
+    (app.address() as net.AddressInfo).port;
 
   it("listens on PORT when no port is passed", async () => {
     const port = await freePort();
@@ -174,6 +175,6 @@ describe("run() port", () => {
     const app = createApp();
 
     await expect(app.run()).rejects.toThrow("Invalid PORT \"abc\"");
-    expect(app.app.server.listening).toBe(false);
+    expect(fastifyOf(app).server.listening).toBe(false);
   });
 });

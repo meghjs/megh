@@ -93,8 +93,7 @@ validated against `CreateUserDto` before the handler runs, and with
 ## How it's built
 
 - **On Fastify.** Megh adds structure on top of Fastify rather than replacing
-  it. The Fastify instance is always available as `app.app`, so any Fastify
-  plugin works.
+  it. Any Fastify plugin works through `app.registerFastifyPlugin()`.
 - **Install only what you use.** Integrations such as CORS, OpenAPI, uploads,
   Redis and Socket.IO are optional peer dependencies. If one is missing, the
   `use*` call tells you what to install.

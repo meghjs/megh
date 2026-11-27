@@ -65,13 +65,13 @@ describe("views over HTTP", () => {
   });
 
   afterEach(async () => {
-    await app.app.close();
+    await app.close();
     setViewEngine(undefined);
     spies.forEach((s) => s.mockRestore());
   });
 
   it("renders Results.View from a controller as text/html", async () => {
-    const res = await app.app.inject({ method: "GET", url: "/pages/home" });
+    const res = await app.inject({ method: "GET", url: "/pages/home" });
     expect(res.statusCode).toBe(200);
     expect(res.headers["content-type"]).toBe("text/html; charset=utf-8");
     expect(res.body).toMatch(/<title>Home<\/title>/);
@@ -79,7 +79,7 @@ describe("views over HTTP", () => {
   });
 
   it("applies the status code, headers and escaping", async () => {
-    const res = await app.app.inject({
+    const res = await app.inject({
       method: "GET",
       url: "/pages/nav/%3Cb%3E",
     });
@@ -89,14 +89,14 @@ describe("views over HTTP", () => {
   });
 
   it("renders views returned by mapGet handlers", async () => {
-    const res = await app.app.inject({ method: "GET", url: "/fn" });
+    const res = await app.inject({ method: "GET", url: "/fn" });
     expect(res.statusCode).toBe(200);
     expect(res.headers["content-type"]).toBe("text/html; charset=utf-8");
     expect(res.body).toBe("<nav>Megh | Guest</nav>\n");
   });
 
   it("answers 500 when a view fails", async () => {
-    const res = await app.app.inject({ method: "GET", url: "/pages/broken" });
+    const res = await app.inject({ method: "GET", url: "/pages/broken" });
     expect(res.statusCode).toBe(500);
   });
 });

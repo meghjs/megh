@@ -87,7 +87,7 @@ describe("useMethodOverride", () => {
     url: string,
     payload: string,
     headers: Record<string, string> = FORM,
-  ) => app.app.inject({ method: "POST", url, headers, payload });
+  ) => app.inject({ method: "POST", url, headers, payload });
 
   beforeEach(async () => {
     spies = (["log", "warn", "error"] as const).map((m) =>
@@ -101,7 +101,7 @@ describe("useMethodOverride", () => {
   });
 
   afterEach(async () => {
-    await app.app.close();
+    await app.close();
     spies.forEach((s) => s.mockRestore());
   });
 
@@ -129,14 +129,14 @@ describe("useMethodOverride", () => {
       method: "POST",
       title: "New",
     });
-    const json = await app.app.inject({
+    const json = await app.inject({
       method: "POST",
       url: "/items",
       payload: { title: "Json" },
     });
     expect(json.json()).toEqual({ method: "POST", title: "Json" });
     // _method in a JSON body is not an override: still a POST, and /items/:id has none.
-    const notForm = await app.app.inject({
+    const notForm = await app.inject({
       method: "POST",
       url: "/items/1",
       payload: { _method: "PUT", title: "x" },
@@ -151,7 +151,7 @@ describe("useMethodOverride", () => {
   });
 
   it("does not touch GET requests", async () => {
-    const res = await app.app.inject({
+    const res = await app.inject({
       method: "GET",
       url: "/items/5?_method=DELETE",
     });
@@ -159,7 +159,7 @@ describe("useMethodOverride", () => {
   });
 
   it("works over a real socket", async () => {
-    const { port } = app.app.server.address() as { port: number };
+    const { port } = app.address() as { port: number };
     const res = await fetch(`http://127.0.0.1:${port}/items/7`, {
       method: "POST",
       headers: FORM,
@@ -176,7 +176,7 @@ describe("useMethodOverride", () => {
       else fd.append(k, v, v.name);
     }
     const req = new Request("http://localhost", { method: "POST", body: fd });
-    return app.app.inject({
+    return app.inject({
       method: "POST",
       url,
       headers: { "content-type": req.headers.get("content-type")! },

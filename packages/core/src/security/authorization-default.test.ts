@@ -84,7 +84,7 @@ async function boot(
 }
 
 const get = (app: MeghApplication, url: string, user?: string, role?: string) =>
-  app.app.inject({
+  app.inject({
     url,
     headers: {
       ...(user && { "x-user": user }),
@@ -166,7 +166,7 @@ describe("deny-by-default authorization (#142)", () => {
     const app = await boot({ default: "authenticated" }, (a) =>
       a.useOpenApi({ provider: "default" } as any),
     );
-    const spec = (await app.app.inject({ url: "/swagger/json" })).json();
+    const spec = (await app.inject({ url: "/swagger/json" })).json();
     const responses = (path: string) =>
       Object.keys(spec.paths[path].get.responses);
     expect(responses("/items")).toContain("401");

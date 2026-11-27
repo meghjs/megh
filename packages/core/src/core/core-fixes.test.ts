@@ -36,6 +36,7 @@ import { FileStorage } from "../storage/file-storage";
 import { MultipartFile } from "../http/multipart";
 import { defaultErrorLogger } from "../errors/error-handler";
 import * as internal from "../observability/internal-logger";
+import { fastifyOf } from "./internal";
 
 // ─── #51 mapped types ────────────────────────────────────────────────────────
 
@@ -300,7 +301,7 @@ describe("scheduler (#100)", () => {
     const app = MeghApplication.getInternalApp();
     app.useScheduler([Ticker]);
     const stop = vi.spyOn((app as any).scheduler, "stopAll");
-    vi.spyOn(app.app, "ready").mockRejectedValue(new Error("boom"));
+    vi.spyOn(fastifyOf(app), "ready").mockRejectedValue(new Error("boom"));
     await expect(app.run(0, { host: "127.0.0.1" })).rejects.toThrow("boom");
     expect(stop).toHaveBeenCalled();
   });
