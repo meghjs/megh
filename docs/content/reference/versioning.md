@@ -21,7 +21,7 @@ Use matching versions:
 ```
 
 `@meghjs/data` is the exception: it is no longer released and stays at 0.7.2,
-which works with every 0.7 release of `@meghjs/core`.
+which works with `@meghjs/core` 0.7.2 and later 0.7 releases.
 
 ## Before 1.0
 
