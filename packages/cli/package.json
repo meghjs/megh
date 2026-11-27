@@ -1,6 +1,6 @@
 {
   "name": "@meghjs/cli",
-  "version": "0.7.2",
+  "version": "0.7.3",
   "description": "CLI for scaffolding and running Megh applications",
   "author": "Tareq Hossain",
   "license": "MIT",
@@ -52,7 +52,7 @@
     "vitest": "^4.1.12"
   },
   "peerDependencies": {
-    "@meghjs/core": "^0.7.2"
+    "@meghjs/core": "^0.7.3"
   },
   "peerDependenciesMeta": {
     "@meghjs/core": {

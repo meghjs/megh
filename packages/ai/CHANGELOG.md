@@ -3,6 +3,17 @@
 All notable changes to this project will be documented in this file.
 See [Conventional Commits](https://conventionalcommits.org) for commit guidelines.
 
+## [0.7.3](https://github.com/meghjs/megh/compare/v0.7.2...v0.7.3) (2026-11-27)
+
+* feat(core)!: hide the Fastify instance; add registerFastifyPlugin ([6fbcd77](https://github.com/meghjs/megh/commit/6fbcd77039d7bf2d6e46c11649d41f8b381817d0))
+
+### BREAKING CHANGES
+
+* `app.app` is removed. Use registerFastifyPlugin(),
+  inject(), address() and close() instead.
+
+
+
 ## [0.7.2](https://github.com/meghjs/megh/compare/v0.7.1...v0.7.2) (2026-11-24)
 
 ### Features

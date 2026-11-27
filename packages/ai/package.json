@@ -1,6 +1,6 @@
 {
   "name": "@meghjs/ai",
-  "version": "0.7.2",
+  "version": "0.7.3",
   "description": "Turn Megh routes into LLM tools that run through the normal request pipeline",
   "author": "Tareq Hossain",
   "license": "MIT",
@@ -51,7 +51,7 @@
     "prepublishOnly": "npm run build"
   },
   "peerDependencies": {
-    "@meghjs/core": "^0.7.2",
+    "@meghjs/core": "^0.7.3",
     "@modelcontextprotocol/sdk": ">=1.20.0"
   },
   "peerDependenciesMeta": {
@@ -60,7 +60,7 @@
     }
   },
   "devDependencies": {
-    "@meghjs/core": "^0.7.2",
+    "@meghjs/core": "^0.7.3",
     "@modelcontextprotocol/sdk": "^1.32.2",
     "@swc/core": "^1.16.20",
     "@types/node": "^22.20.5",

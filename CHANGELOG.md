@@ -3,6 +3,29 @@
 All notable changes to this project will be documented in this file.
 See [Conventional Commits](https://conventionalcommits.org) for commit guidelines.
 
+## [0.7.3](https://github.com/meghjs/megh/compare/v0.7.2...v0.7.3) (2026-11-27)
+
+* feat(core)!: hide the Fastify instance; add registerFastifyPlugin ([6fbcd77](https://github.com/meghjs/megh/commit/6fbcd77039d7bf2d6e46c11649d41f8b381817d0))
+
+### Bug Fixes
+
+* **cli:** approve pnpm build scripts in new projects ([ae14dbf](https://github.com/meghjs/megh/commit/ae14dbf1525c55035c1a2a00e8cefb242b55705b))
+* **core:** use the private Fastify instance and app.inject() after [#179](https://github.com/meghjs/megh/issues/179) ([f97fa9f](https://github.com/meghjs/megh/commit/f97fa9f1f985edccf6283aa8f94728d45298aab3))
+
+### Features
+
+* **core:** sessions, login redirect, gates and auth view directives ([eaeb127](https://github.com/meghjs/megh/commit/eaeb127c69dfb39a1aea925269a7394b6f1cd1fd))
+* **editors:** directive completion in .megh.html ([accda78](https://github.com/meghjs/megh/commit/accda785e13bbc61deb27f6236d909ebfc396226))
+* **neovim:** add Megh Templates plugin for Neovim ([d6d1b57](https://github.com/meghjs/megh/commit/d6d1b57ebfe3d59f081aba94839be3ffbdc4ba1a))
+* **vscode:** add a Megh language server for other editors ([014d4ae](https://github.com/meghjs/megh/commit/014d4ae88406c04550484c9f69b6f6478e9c4d01))
+
+### BREAKING CHANGES
+
+* `app.app` is removed. Use registerFastifyPlugin(),
+  inject(), address() and close() instead.
+
+
+
 ## [0.7.2](https://github.com/meghjs/megh/compare/v0.7.1...v0.7.2) (2026-11-24)
 
 ### Features

@@ -1,6 +1,6 @@
 {
   "name": "@meghjs/mcp",
-  "version": "0.7.2",
+  "version": "0.7.3",
   "description": "Model Context Protocol server that lets AI assistants inspect and scaffold Megh applications",
   "author": "Tareq Hossain",
   "license": "MIT",
@@ -35,7 +35,7 @@
     "fastify"
   ],
   "dependencies": {
-    "@meghjs/cli": "^0.7.2",
+    "@meghjs/cli": "^0.7.3",
     "@modelcontextprotocol/sdk": "^1.32.2",
     "zod": "^4.6.7"
   },

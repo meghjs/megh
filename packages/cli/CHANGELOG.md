@@ -3,6 +3,14 @@
 All notable changes to this project will be documented in this file.
 See [Conventional Commits](https://conventionalcommits.org) for commit guidelines.
 
+## [0.7.3](https://github.com/meghjs/megh/compare/v0.7.2...v0.7.3) (2026-11-27)
+
+### Bug Fixes
+
+* **cli:** approve pnpm build scripts in new projects ([ae14dbf](https://github.com/meghjs/megh/commit/ae14dbf1525c55035c1a2a00e8cefb242b55705b))
+
+
+
 ## [0.7.2](https://github.com/meghjs/megh/compare/v0.7.1...v0.7.2) (2026-11-24)
 
 ### Features
