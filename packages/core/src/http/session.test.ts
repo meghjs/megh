@@ -130,7 +130,7 @@ const pair = (setCookie: string) => setCookie.split(";")[0];
 describe("useSession", () => {
   it("keeps values across requests with a signed, HttpOnly cookie", async () => {
     const app = await boot();
-    const first = await app.app.inject("/s/count");
+    const first = await app.inject("/s/count");
     expect(first.json()).toEqual({ n: 1 });
     const setCookie = cookieOf(first)!;
     expect(setCookie).toMatch(/HttpOnly/);
@@ -138,7 +138,7 @@ describe("useSession", () => {
     expect(setCookie).toMatch(/Max-Age=7200/);
     expect(setCookie).not.toMatch(/Secure/);
 
-    const second = await app.app.inject({
+    const second = await app.inject({
       url: "/s/count",
       headers: { cookie: pair(setCookie) },
     });
@@ -147,16 +147,16 @@ describe("useSession", () => {
 
   it("sets no cookie for a visitor with nothing stored", async () => {
     const app = await boot();
-    const res = await app.app.inject("/s/peek");
+    const res = await app.inject("/s/peek");
     expect(res.json()).toEqual({ all: {}, isNew: true });
     expect(cookieOf(res)).toBeUndefined();
   });
 
   it("ignores a cookie with a bad signature", async () => {
     const app = await boot();
-    const cookie = pair(cookieOf(await app.app.inject("/s/count"))!);
+    const cookie = pair(cookieOf(await app.inject("/s/count"))!);
     const forged = cookie.replace(/.$/, (c) => (c === "A" ? "B" : "A"));
-    const res = await app.app.inject({
+    const res = await app.inject({
       url: "/s/peek",
       headers: { cookie: forged },
     });
@@ -167,20 +167,20 @@ describe("useSession", () => {
     const old = "o".repeat(32);
     const store = new MemorySessionStore();
     let app = await boot({ secret: old, store });
-    const cookie = pair(cookieOf(await app.app.inject("/s/count"))!);
+    const cookie = pair(cookieOf(await app.inject("/s/count"))!);
     await app.close();
 
     app = await boot({ secret: [SECRET, old], store });
-    const res = await app.app.inject({ url: "/s/count", headers: { cookie } });
+    const res = await app.inject({ url: "/s/count", headers: { cookie } });
     expect(res.json()).toEqual({ n: 2 });
     store.close();
   });
 
   it("logs in with a new session ID, flashes once, and renders @auth/@session", async () => {
     const app = await boot();
-    const anon = pair(cookieOf(await app.app.inject("/s/count"))!);
+    const anon = pair(cookieOf(await app.inject("/s/count"))!);
 
-    const login = await app.app.inject({
+    const login = await app.inject({
       method: "POST",
       url: "/s/login",
       headers: { cookie: anon },
@@ -191,13 +191,13 @@ describe("useSession", () => {
     expect(authed).not.toBe(anon); // regenerated
 
     // The pre-login session is gone.
-    const reused = await app.app.inject({
+    const reused = await app.inject({
       url: "/s/peek",
       headers: { cookie: anon },
     });
     expect(reused.json().isNew).toBe(true);
 
-    const home = await app.app.inject({
+    const home = await app.inject({
       url: "/s/home",
       headers: { cookie: authed },
     });
@@ -207,7 +207,7 @@ describe("useSession", () => {
     expect(home.body).not.toContain("guest");
 
     // Flashed values last one request.
-    const again = await app.app.inject({
+    const again = await app.inject({
       url: "/s/home",
       headers: { cookie: authed },
     });
@@ -217,7 +217,7 @@ describe("useSession", () => {
 
   it("renders the guest branches without a user", async () => {
     const app = await boot();
-    const home = await app.app.inject("/s/home");
+    const home = await app.inject("/s/home");
     expect(home.body).toContain("<a>Log in</a>");
     expect(home.body).toContain("<span>guest</span>");
     expect(home.body).not.toContain("status");
@@ -225,21 +225,21 @@ describe("useSession", () => {
 
   it("destroys the session and clears the cookie on logout", async () => {
     const app = await boot();
-    const login = await app.app.inject({
+    const login = await app.inject({
       method: "POST",
       url: "/s/login",
       payload: { id: 1 },
     });
     const cookie = pair(cookieOf(login)!);
 
-    const logout = await app.app.inject({
+    const logout = await app.inject({
       method: "POST",
       url: "/s/logout",
       headers: { cookie },
     });
     expect(cookieOf(logout)).toMatch(/^megh_session=; .*Max-Age=0/);
 
-    const after = await app.app.inject({ url: "/s/home", headers: { cookie } });
+    const after = await app.inject({ url: "/s/home", headers: { cookie } });
     expect(after.body).toContain("Log in");
   });
 
@@ -250,7 +250,7 @@ describe("useSession", () => {
       maxAge: "7 days",
       cookie: { sameSite: "strict", secure: true, domain: "example.com" },
     });
-    const res = await app.app.inject("/s/count");
+    const res = await app.inject("/s/count");
     const header = String(res.headers["set-cookie"]);
     expect(header).toMatch(/^sid=/);
     expect(header).toMatch(/Max-Age=604800/);
@@ -287,7 +287,7 @@ describe("useSession", () => {
     app.useControllers([SessionController]);
     apps.push(app);
     await app.run(0, { host: "127.0.0.1" });
-    const res = await app.app.inject("/s/count");
+    const res = await app.inject("/s/count");
     expect(res.statusCode).toBe(500);
   });
 });

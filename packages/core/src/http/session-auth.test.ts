@@ -158,7 +158,7 @@ function cookieOf(res: { headers: Record<string, unknown> }) {
 }
 
 async function loginAs(app: MeghApplication, id: number, cookie?: string) {
-  const res = await app.app.inject({
+  const res = await app.inject({
     method: "POST",
     url: "/login",
     headers: { ...HTML, ...(cookie && { cookie }) },
@@ -170,7 +170,7 @@ async function loginAs(app: MeghApplication, id: number, cookie?: string) {
 describe("loginPath", () => {
   it("redirects a browser to the login page, then back to the page it asked for", async () => {
     const app = await boot();
-    const guest = await app.app.inject({
+    const guest = await app.inject({
       url: "/dashboard?tab=2",
       headers: HTML,
     });
@@ -188,7 +188,7 @@ describe("loginPath", () => {
 
   it("uses 303 for a form POST and doesn't remember it", async () => {
     const app = await boot();
-    const res = await app.app.inject({
+    const res = await app.inject({
       method: "POST",
       url: "/dashboard/save",
       headers: HTML,
@@ -200,37 +200,37 @@ describe("loginPath", () => {
 
   it("keeps the 401 for JSON and XHR requests", async () => {
     const app = await boot();
-    const json = await app.app.inject({
+    const json = await app.inject({
       url: "/dashboard",
       headers: { accept: "application/json" },
     });
     expect(json.statusCode).toBe(401);
-    const xhr = await app.app.inject({
+    const xhr = await app.inject({
       url: "/dashboard",
       headers: { ...HTML, "x-requested-with": "XMLHttpRequest" },
     });
     expect(xhr.statusCode).toBe(401);
-    const curl = await app.app.inject({ url: "/dashboard" });
+    const curl = await app.inject({ url: "/dashboard" });
     expect(curl.statusCode).toBe(401);
   });
 
   it("serves the page once logged in, and keeps 403 for a denied user", async () => {
     const app = await boot();
     const { cookie } = await loginAs(app, 2);
-    const dash = await app.app.inject({
+    const dash = await app.inject({
       url: "/dashboard",
       headers: { ...HTML, cookie },
     });
     expect(dash.body).toBe("dashboard");
 
-    const admin = await app.app.inject({
+    const admin = await app.inject({
       url: "/admin",
       headers: { ...HTML, cookie },
     });
     expect(admin.statusCode).toBe(403);
 
     const { cookie: adminCookie } = await loginAs(app, 1);
-    const ok = await app.app.inject({
+    const ok = await app.inject({
       url: "/admin",
       headers: { ...HTML, cookie: adminCookie },
     });
@@ -263,11 +263,11 @@ describe("loginPath", () => {
 describe("gates", () => {
   it("drive @can / @cannot from the request's user", async () => {
     const app = await boot();
-    const guest = await app.app.inject({ url: "/posts/10", headers: HTML });
+    const guest = await app.inject({ url: "/posts/10", headers: HTML });
     expect(guest.statusCode).toBe(302); // the "authenticated" default
 
     const author = (await loginAs(app, 2)).cookie;
-    const own = await app.app.inject({
+    const own = await app.inject({
       url: "/posts/10",
       headers: { ...HTML, cookie: author },
     });
@@ -275,7 +275,7 @@ describe("gates", () => {
     expect(own.body).toContain("[not-admin]");
 
     const admin = (await loginAs(app, 1)).cookie;
-    const any = await app.app.inject({
+    const any = await app.inject({
       url: "/posts/10",
       headers: { ...HTML, cookie: admin },
     });
@@ -287,7 +287,7 @@ describe("gates", () => {
     const app = await boot();
     app.defineGate("never", () => false);
     const member = (await loginAs(app, 2)).cookie;
-    const ok = await app.app.inject({
+    const ok = await app.inject({
       method: "POST",
       url: "/posts/10/edit",
       headers: { cookie: member },
@@ -296,7 +296,7 @@ describe("gates", () => {
 
     USERS[3] = { id: 3, role: "member" };
     const other = (await loginAs(app, 3)).cookie;
-    const denied = await app.app.inject({
+    const denied = await app.inject({
       method: "POST",
       url: "/posts/10/edit",
       headers: { cookie: other },

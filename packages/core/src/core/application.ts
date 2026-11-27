@@ -741,7 +741,7 @@ export class MeghApplication implements IMeghApplication {
     if (this.usesSession) {
       throw new SystemUseError("[Megh] useSession() is already on.");
     }
-    const { store, ownsStore } = installSession(this.app, options);
+    const { store, ownsStore } = installSession(this.fastify, options);
     this.usesSession = true;
     if (ownsStore) this.ownedSessionStore = store;
     if (options.loginPath !== undefined) {
