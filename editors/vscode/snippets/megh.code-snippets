@@ -14,64 +14,14 @@
     "body": "{{-- ${1:comment} --}}",
     "description": "Template comment, not sent to the browser"
   },
-  "@if": {
-    "prefix": "@if",
-    "body": ["@if(${1:condition})", "\t$0", "@endif"]
-  },
   "@if @else": {
     "prefix": "@ifelse",
     "body": ["@if(${1:condition})", "\t$2", "@else", "\t$0", "@endif"]
-  },
-  "@unless": {
-    "prefix": "@unless",
-    "body": ["@unless(${1:condition})", "\t$0", "@endunless"]
-  },
-  "@isset": {
-    "prefix": "@isset",
-    "body": ["@isset(${1:value})", "\t$0", "@endisset"]
-  },
-  "@foreach": {
-    "prefix": "@foreach",
-    "body": ["@foreach(${1:items} as ${2:item})", "\t$0", "@endforeach"],
-    "description": "Loop; `loop.index`, `loop.first`, `loop.last` are available inside"
-  },
-  "@for": {
-    "prefix": "@for",
-    "body": ["@for(let ${1:i} = 0; $1 < ${2:n}; $1++)", "\t$0", "@endfor"]
-  },
-  "@while": {
-    "prefix": "@while",
-    "body": ["@while(${1:condition})", "\t$0", "@endwhile"]
   },
   "@extends": {
     "prefix": "@extends",
     "body": ["@extends('${1:layouts.app}')", "", "@section('title', '${2:Title}')", "", "@section('content')", "\t$0", "@endsection"],
     "description": "Page that fills a layout"
-  },
-  "@section": {
-    "prefix": "@section",
-    "body": ["@section('${1:content}')", "\t$0", "@endsection"]
-  },
-  "@yield": {
-    "prefix": "@yield",
-    "body": "@yield('${1:content}')"
-  },
-  "@include": {
-    "prefix": "@include",
-    "body": "@include('${1:partials.name}')"
-  },
-  "@push": {
-    "prefix": "@push",
-    "body": ["@push('${1:scripts}')", "\t$0", "@endpush"]
-  },
-  "@stack": {
-    "prefix": "@stack",
-    "body": "@stack('${1:scripts}')"
-  },
-  "@json": {
-    "prefix": "@json",
-    "body": "@json(${1:value})",
-    "description": "Value as JSON, safe inside <script>"
   },
   "@react": {
     "prefix": "@react",

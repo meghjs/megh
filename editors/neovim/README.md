@@ -19,9 +19,10 @@ feature does.
 - **Highlighting**: HTML, with `{{ }}`, `{!! !!}`, directive arguments,
   `@js ... @endjs` and `@react ... @endreact` as JavaScript, also inside
   attribute values and `<script>`; `{{-- --}}` as comments.
-- **Completion** (LSP): HTML tags and attributes, `<x-...>` components and
-  their props, view variables inside `{{ }}` and directive arguments,
-  `todo.` members, view, component and section names.
+- **Completion** (LSP): directives after `@` (block ones as snippets with
+  their closer), HTML tags and attributes, `<x-...>` components and their
+  props, view variables inside `{{ }}` and directive arguments, `todo.`
+  members, view, component and section names.
 - **Hover** (`K`): directive docs, where a variable comes from, HTML docs.
 - **Formatting**: `:lua vim.lsp.buf.format()`.
 - **Diagnostics**: unclosed `{{`, unbalanced `@if` / `@endif`, HTML problems.

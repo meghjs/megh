@@ -5,6 +5,7 @@ import type * as lsp from 'vscode-html-languageservice';
 import { MeghCompleter } from './complete';
 import { EXTENSION, findViewsRoot, scanComponents } from './components';
 import type { FormatOptions } from './format';
+import type { DirectiveItem } from './directive-complete';
 import type { CodeItem } from './megh-code';
 import { ProjectIndex, SourceFile } from './project';
 
@@ -27,11 +28,15 @@ export function activate(context: vscode.ExtensionContext) {
           const result = completer.complete(document.uri.toString(), document.getText(), position, view);
           if (!result) return undefined;
           if (result.type === 'html') return toVscodeList(result.list);
+          if (result.type === 'directive') {
+            return result.items.map((item) => toDirectiveItem(item, document, position));
+          }
           return result.items.map((item) => toCodeItem(item, document, position));
         },
       },
-      // The HTML extension's triggers, plus "." for members and quotes for view names.
-      '<', ' ', ':', '"', "'", '=', '/', '.', '-',
+      // The HTML extension's triggers, plus "." for members, quotes for view names
+      // and "@" for directives.
+      '<', ' ', ':', '"', "'", '=', '/', '.', '-', '@',
     ),
   );
 
@@ -257,6 +262,17 @@ function toCodeItem(item: CodeItem, document: vscode.TextDocument, position: vsc
   out.detail = item.detail;
   if (item.documentation) out.documentation = new vscode.MarkdownString(item.documentation);
   out.range = new vscode.Range(document.positionAt(item.start), position);
+  return out;
+}
+
+function toDirectiveItem(item: DirectiveItem, document: vscode.TextDocument, position: vscode.Position) {
+  const out = new vscode.CompletionItem(item.label, vscode.CompletionItemKind.Keyword);
+  out.detail = item.detail;
+  out.documentation = new vscode.MarkdownString(item.documentation);
+  out.insertText = new vscode.SnippetString(item.snippet);
+  out.range = new vscode.Range(document.positionAt(item.start), position);
+  out.sortText = item.sortText;
+  out.preselect = item.preselect;
   return out;
 }
 

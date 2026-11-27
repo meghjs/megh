@@ -150,7 +150,7 @@ test('validation: valid templates have no problems', () => {
 test('validation: Megh structure errors', () => {
   assert.deepEqual(problems('@if(a) x'), ['error: @if is not closed with @endif']);
   assert.deepEqual(problems('x @endif'), ['error: @endif without @if']);
-  assert.deepEqual(problems('@else'), ['error: @else outside @if, @unless or @isset']);
+  assert.deepEqual(problems('@else'), ['error: @else outside @if, @unless, @isset, @auth, @guest, @can or @cannot']);
   assert.deepEqual(problems('@isset(a) x @elseif(b) y @else z @endisset'), []);
   assert.match(problems('@foreach(a as b) @if(c) @endforeach')[0], /@endforeach found, but @if \(line 1\) is still open/);
   assert.deepEqual(problems('<p>{{ name </p>'), ['error: `{{` is not closed with `}}`']);

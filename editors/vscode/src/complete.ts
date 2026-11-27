@@ -8,6 +8,7 @@ import {
   Position,
 } from 'vscode-html-languageservice';
 import { TextDocument } from 'vscode-languageserver-textdocument';
+import { completeDirective, DirectiveItem } from './directive-complete';
 import { formatTemplate, FormatOptions } from './format';
 import { maskMegh, meghAt } from './mask';
 import { CodeContext, CodeHover, CodeItem, completeCode, hoverCode } from './megh-code';
@@ -15,7 +16,8 @@ import { Problem, validate } from './validate';
 
 export type Completion =
   | { type: 'html'; list: CompletionList }
-  | { type: 'code'; items: CodeItem[] };
+  | { type: 'code'; items: CodeItem[] }
+  | { type: 'directive'; items: DirectiveItem[] };
 
 export type HoverResult =
   | { type: 'html'; hover: Hover }
@@ -49,6 +51,12 @@ export class MeghCompleter {
     const doc = TextDocument.create(uri, 'html', 0, masked);
     const offset = doc.offsetAt(position);
     const range = meghAt(ranges, offset);
+    // On a directive's name (`@fo|` or `@fo|(items as item)`): directive names.
+    const onName = range?.kind === 'directive' && offset <= range.start + 1 + range.name!.length;
+    if (!range || onName) {
+      const directives = completeDirective(text, masked, offset, ranges);
+      if (directives) return { type: 'directive', items: directives };
+    }
     if (range) {
       const items = completeCode(text, offset, range, ranges, { ...this.ctx, view });
       return items ? { type: 'code', items } : null;

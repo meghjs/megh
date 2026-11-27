@@ -166,7 +166,7 @@
       "patterns": [
         {
           "name": "meta.directive.control.megh",
-          "begin": "(?<![\\w@.])(@)(if|elseif|unless|isset|foreach|for|while)\\s*(\\()",
+          "begin": "(?<![\\w@.])(@)(if|elseif|unless|isset|foreach|for|while|session|can|cannot)\\s*(\\()",
           "beginCaptures": {
             "1": {
               "name": "keyword.control.megh punctuation.definition.directive.megh"
@@ -226,7 +226,7 @@
         },
         {
           "name": "meta.directive.control.megh",
-          "match": "(?<![\\w@.])(@)(else|endif|endunless|endisset|endforeach|endfor|endwhile|break|continue)\\b(?!\\s*\\()",
+          "match": "(?<![\\w@.])(@)(else|endif|endunless|endisset|endforeach|endfor|endwhile|break|continue|auth|endauth|guest|endguest|endsession|endcan|endcannot)\\b(?!\\s*\\()",
           "captures": {
             "1": {
               "name": "keyword.control.megh punctuation.definition.directive.megh"

@@ -39,12 +39,12 @@
   ],
   "folding": {
     "markers": {
-      "start": "^\\s*(@(if|unless|isset|foreach|for|while|push|component|slot|react|js)\\b|@section\\(\\s*(['\"])[^'\"]*\\3\\s*\\)|<!--\\s*#region\\b|\\{\\{--\\s*#region\\b)",
-      "end": "^\\s*(@(endif|endunless|endisset|endforeach|endfor|endwhile|endpush|endcomponent|endslot|endreact|endjs|endsection|show)\\b|<!--\\s*#endregion\\b|\\{\\{--\\s*#endregion\\b)"
+      "start": "^\\s*(@(if|unless|isset|foreach|for|while|push|component|slot|react|js|auth|guest|session|can|cannot)\\b|@section\\(\\s*(['\"])[^'\"]*\\3\\s*\\)|<!--\\s*#region\\b|\\{\\{--\\s*#region\\b)",
+      "end": "^\\s*(@(endif|endunless|endisset|endforeach|endfor|endwhile|endpush|endcomponent|endslot|endreact|endjs|endsection|show|endauth|endguest|endsession|endcan|endcannot)\\b|<!--\\s*#endregion\\b|\\{\\{--\\s*#endregion\\b)"
     }
   },
   "indentationRules": {
-    "increaseIndentPattern": "^\\s*(@(if|elseif|else|unless|isset|foreach|for|while|push|component|slot)\\b(?!.*@end)|@section\\(\\s*(['\"])[^'\"]*\\3\\s*\\)\\s*$)",
-    "decreaseIndentPattern": "^\\s*@(elseif|else|endif|endunless|endisset|endforeach|endfor|endwhile|endpush|endcomponent|endslot|endsection|show)\\b"
+    "increaseIndentPattern": "^\\s*(@(if|elseif|else|unless|isset|foreach|for|while|push|component|slot|auth|guest|session|can|cannot)\\b(?!.*@end)|@section\\(\\s*(['\"])[^'\"]*\\3\\s*\\)\\s*$)",
+    "decreaseIndentPattern": "^\\s*@(elseif|else|endif|endunless|endisset|endforeach|endfor|endwhile|endpush|endcomponent|endslot|endsection|show|endauth|endguest|endsession|endcan|endcannot)\\b"
   }
 }

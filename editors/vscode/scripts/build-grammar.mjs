@@ -5,9 +5,12 @@ import { writeFileSync } from 'node:fs';
 import { fileURLToPath } from 'node:url';
 
 /** Directives that take (args) and open or continue a block. */
-const CONTROL = ['if', 'elseif', 'unless', 'isset', 'foreach', 'for', 'while'];
+const CONTROL = ['if', 'elseif', 'unless', 'isset', 'foreach', 'for', 'while', 'session', 'can', 'cannot'];
 /** Control directives used bare. */
-const CONTROL_BARE = ['else', 'endif', 'endunless', 'endisset', 'endforeach', 'endfor', 'endwhile', 'break', 'continue'];
+const CONTROL_BARE = [
+  'else', 'endif', 'endunless', 'endisset', 'endforeach', 'endfor', 'endwhile', 'break', 'continue',
+  'auth', 'endauth', 'guest', 'endguest', 'endsession', 'endcan', 'endcannot',
+];
 /** Other built-ins that take (args). */
 const BUILTIN = ['extends', 'section', 'yield', 'include', 'push', 'stack', 'component', 'slot', 'json', 'method'];
 /** Other built-ins used bare. */

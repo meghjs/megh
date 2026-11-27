@@ -19,6 +19,11 @@ local blocks = {
   [[@component\>:@endcomponent\>]],
   [[@slot\>:@endslot\>]],
   [[@react\>:@endreact\>]],
+  [[@auth\>:@else\>:@endauth\>]],
+  [[@guest\>:@else\>:@endguest\>]],
+  [[@session\>:@endsession\>]],
+  [[@can\>:@else\>:@endcan\>]],
+  [[@cannot\>:@else\>:@endcannot\>]],
   [[@js\>\s*\%((\)\@!:@endjs\>]],
   [[{{--:--}}]],
 }
