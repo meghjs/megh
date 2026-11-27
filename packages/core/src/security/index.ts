@@ -21,3 +21,5 @@ export type {
   RedisEvalClient,
   MemoryRateLimitStoreOptions,
 } from "./rate-limit";
+export { Gate, gate } from "./gate";
+export type { GateCheck } from "./gate";

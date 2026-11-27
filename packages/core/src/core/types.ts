@@ -81,6 +81,7 @@ export interface ParamMetaOptions {
     | "route:body"
     | "route:header"
     | "route:user"
+    | "route:session"
     | "route:file"
     | "route:files";
 }
@@ -100,6 +101,7 @@ export interface MethodParamMeta {
   body: ParamMetaOptions[];
   headers: ParamMetaOptions[];
   currentUser: ParamMetaOptions[];
+  session?: ParamMetaOptions[];
   swagger?: OpenApiUiOptions;
   file?: any[];
   files?: ParamMetaFilesOptions[];

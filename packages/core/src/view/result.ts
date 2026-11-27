@@ -1,5 +1,6 @@
 import type { FastifyReply } from "fastify";
 import { getViewEngine } from "./engine";
+import { sessionOf } from "../http/session";
 
 /**
  * A rendered HTML page as a route result. Return it from a controller or a
@@ -23,9 +24,12 @@ export class ViewResult {
     return this;
   }
 
-  /** Render with the engine configured by `app.useViews()`. */
-  render(): string {
-    return getViewEngine().render(this.name, this.data);
+  /**
+   * Render with the engine configured by `app.useViews()`. `defaults` are
+   * per-request values (the session) that the view's own data overrides.
+   */
+  render(defaults: Record<string, unknown> = {}): string {
+    return getViewEngine().render(this.name, { ...defaults, ...this.data });
   }
 }
 
@@ -42,7 +46,8 @@ export function view(
 export function sendView(res: FastifyReply, result: ViewResult) {
   // Render first: if the template throws, nothing has been written yet and
   // Fastify's error handler can still answer.
-  const html = result.render();
+  const session = sessionOf(res.request);
+  const html = result.render(session ? { session } : {});
   for (const [k, v] of Object.entries(result.headers)) res.header(k, v);
   return res
     .code(result.statusCode)
