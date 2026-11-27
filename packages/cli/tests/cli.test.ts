@@ -453,6 +453,19 @@ describe("new", () => {
     expect(exists("shop", "src", "database", "connection.ts")).toBe(false);
   });
 
+  it("with pnpm, approves the build scripts pnpm would otherwise block", async () => {
+    await createApplication("pn", { cwd: tmp, yes: true, skipInstall: true, pm: "pnpm", features: ["orm"] });
+    const ws = read("pn", "pnpm-workspace.yaml");
+    expect(ws).toContain('allowBuilds:\n  "@swc/core": true\n  better-sqlite3: true\n');
+    expect(ws).toContain('onlyBuiltDependencies:\n  - "@swc/core"\n  - better-sqlite3\n');
+
+    await createApplication("pn_pg", { cwd: tmp, yes: true, skipInstall: true, pm: "pnpm", database: "postgres" });
+    expect(read("pn_pg", "pnpm-workspace.yaml")).not.toContain("better-sqlite3");
+
+    await createApplication("np", { cwd: tmp, yes: true, skipInstall: true });
+    expect(exists("np", "pnpm-workspace.yaml")).toBe(false);
+  });
+
   it("--database picks the driver and URL, and implies the orm feature", async () => {
     await createApplication("my-api", { cwd: tmp, yes: true, skipInstall: true, features: ["openapi"], database: "postgres" });
     const pkg = JSON.parse(read("my-api", "package.json"));

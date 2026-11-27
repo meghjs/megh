@@ -228,6 +228,26 @@ export function packageJson(
   return JSON.stringify(pkg, null, 2) + "\n";
 }
 
+/**
+ * pnpm 10+ skips dependency build scripts unless they are approved, and pnpm 12
+ * fails the install over them. @swc/core (used by `megh serve`) and
+ * better-sqlite3 (which downloads its native binary) need theirs. pnpm 11+
+ * reads `allowBuilds`; pnpm 10 reads `onlyBuiltDependencies`.
+ */
+export function pnpmWorkspace(features: Feature[], database: DatabaseKind = DEFAULT_DATABASE): string {
+  const builds = ["@swc/core"];
+  if (features.includes("orm") && database === "sqlite") builds.push("better-sqlite3");
+  const quote = (n: string) => (n.startsWith("@") ? `"${n}"` : n);
+  return (
+    "# Dependencies allowed to run build scripts (pnpm skips them otherwise).\n" +
+    "allowBuilds:\n" +
+    builds.map((n) => `  ${quote(n)}: true\n`).join("") +
+    "# Same list for pnpm 10.\n" +
+    "onlyBuiltDependencies:\n" +
+    builds.map((n) => `  - ${quote(n)}\n`).join("")
+  );
+}
+
 function sortKeys(obj: Record<string, string>) {
   return Object.fromEntries(Object.entries(obj).sort(([a], [b]) => a.localeCompare(b)));
 }
@@ -346,6 +366,7 @@ export async function createApplication(name: string, opts: NewOptions = {}): Pr
   }
   add("src/serve.ts", renderStub("project/serve.stub"));
   add("package.json", packageJson(appName, features, minimal, database));
+  if (pm === "pnpm") add("pnpm-workspace.yaml", pnpmWorkspace(features, database));
   add("tsconfig.json", renderStub("project/tsconfig.stub"));
   add(ENV_TYPES_FILE, envTypesFile([]));
   add("tsconfig.build.json", renderStub("project/tsconfig.build.stub"));
