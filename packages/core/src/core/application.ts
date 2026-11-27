@@ -4,7 +4,16 @@
  * @email xtrinsic96@gmail.com
  * @url https://github.com/xtareq
  */
-import Fastify, { FastifyInstance } from "fastify";
+import Fastify, {
+  FastifyInstance,
+  FastifyPluginAsync,
+  FastifyPluginCallback,
+  FastifyPluginOptions,
+  FastifyRegisterOptions,
+  InjectOptions,
+  LightMyRequestResponse,
+} from "fastify";
+import type { AddressInfo } from "node:net";
 import { MeghRouter } from "./router";
 import { Container } from "../di";
 import {
@@ -106,10 +115,12 @@ const requireCompress = () => requireOptional("@fastify/compress");
 // ---------------------------------------------------------------------------
 
 export class MeghApplication implements IMeghApplication {
-  public app: FastifyInstance;
+  private readonly fastify: FastifyInstance;
   private router: MeghRouter;
   private static instance: MeghApplication;
   private alreadyRun = false;
+  /** Set once routes are being mapped; Fastify plugins can no longer be added. */
+  private routesMapped = false;
   private hasSwagger = false;
   private globalSwaggerOptions: OpenApiUiOptions | undefined;
   private registerControllerAuto = false;
@@ -153,7 +164,7 @@ export class MeghApplication implements IMeghApplication {
     const requestIdHeader =
       (requestId && requestId.header) || DEFAULT_REQUEST_ID_HEADER;
     this.trustProxy = options?.server?.trustProxy;
-    this.app = Fastify({
+    this.fastify = Fastify({
       ...(requestId && {
         // genReqId decides; Fastify's own header lookup would trust any value.
         requestIdHeader: false,
@@ -167,12 +178,12 @@ export class MeghApplication implements IMeghApplication {
         },
       },
     }) as FastifyInstance;
-    this.router = new MeghRouter(this.app, {
+    this.router = new MeghRouter(this.fastify, {
       compiledValidation:
         options?.experimental?.compiledValidation ??
         /^(1|true)$/i.test(process.env.MEGH_COMPILED_VALIDATION ?? ""),
     });
-    installRequestContext(this.app, requestId ? requestIdHeader : null);
+    installRequestContext(this.fastify, requestId ? requestIdHeader : null);
 
     this.pluginNames = registerPlugins(this, options);
     if (this.pluginNames.length) {
@@ -210,10 +221,62 @@ export class MeghApplication implements IMeghApplication {
     return new MeghApplication(options);
   }
 
+  // ── Fastify plugins ──────────────────────────────────────────────────────
+
+  /**
+   * Register a Fastify plugin, for anything Megh doesn't cover with a `use*`
+   * method. Call it before `run()` or inside an `onInit()` hook; Megh loads it
+   * before adding routes, so plugins that hook into routes see all of them.
+   * Errors from the plugin surface when the app starts.
+   *
+   *   import etag from "@fastify/etag";
+   *   app.registerFastifyPlugin(etag);
+   *   app.registerFastifyPlugin(etag, { weak: true });
+   */
+  registerFastifyPlugin<Options extends FastifyPluginOptions>(
+    plugin:
+      | FastifyPluginCallback<Options>
+      | FastifyPluginAsync<Options>
+      | Promise<{
+          default: FastifyPluginCallback<Options> | FastifyPluginAsync<Options>;
+        }>,
+    options?: FastifyRegisterOptions<Options>,
+  ) {
+    if (this.routesMapped) {
+      throw new SystemUseError(
+        "registerFastifyPlugin() must be called before run() or inside an onInit() hook",
+      );
+    }
+    this.fastify.register(
+      plugin as FastifyPluginCallback<Options>,
+      options ?? ({} as FastifyRegisterOptions<Options>),
+    );
+    return this;
+  }
+
+  /**
+   * Send a request to the app in-process, without opening a socket. For
+   * tests; `run()` the app first so its routes are mapped.
+   *
+   *   const res = await app.inject({ method: "GET", url: "/health" });
+   *   res.statusCode; res.json();
+   */
+  inject(options: InjectOptions | string): Promise<LightMyRequestResponse> {
+    return this.fastify.inject(options);
+  }
+
+  /**
+   * The address the server listens on, or `null` before `run()` and after
+   * `close()`. Handy after `run(0)` to find the port the OS picked.
+   */
+  address(): AddressInfo | string | null {
+    return this.fastify.server.address();
+  }
+
   // ── Feature methods ──────────────────────────────────────────────────────
 
   useCors(options: CorsOptions) {
-    this.app.register(requireCors(), options); // ✅ lazy
+    this.fastify.register(requireCors(), options); // ✅ lazy
     return this;
   }
 
@@ -234,7 +297,7 @@ export class MeghApplication implements IMeghApplication {
     if (this.usesSecurityHeaders) {
       throw new SystemUseError("[Megh] useSecurityHeaders() is already on.");
     }
-    installSecurityHeaders(this.app, options, () =>
+    installSecurityHeaders(this.fastify, options, () =>
       this.hasSwagger
         ? (this.globalSwaggerOptions?.routePrefix ?? "/swagger")
         : undefined,
@@ -268,7 +331,7 @@ export class MeghApplication implements IMeghApplication {
       // Only @RateLimit() / .rateLimit() routes are limited.
       (this.router.hasRouteRateLimits ? { global: false } : undefined);
     if (!options) return;
-    const { store, ownsStore } = installRateLimit(this.app, options, {
+    const { store, ownsStore } = installRateLimit(this.fastify, options, {
       trustProxy: this.trustProxy,
     });
     if (ownsStore) this.ownedRateLimitStore = store;
@@ -312,7 +375,7 @@ export class MeghApplication implements IMeghApplication {
   }
 
   useMultipart(options?: any) {
-    this.app.register(requireMultipart(), {
+    this.fastify.register(requireMultipart(), {
       // ✅ lazy
       attachFieldsToBody: true,
       limits: {
@@ -348,7 +411,7 @@ export class MeghApplication implements IMeghApplication {
     const baseSchema = generateSwaggerSchema(safeControllers);
 
     const security = openApiSecurity(options?.auth);
-    await this.app.register(requireSwagger(), {
+    await this.fastify.register(requireSwagger(), {
       // ✅ lazy
       openapi: {
         ...baseSchema,
@@ -381,7 +444,7 @@ export class MeghApplication implements IMeghApplication {
     const routePrefix = options?.routePrefix || "/swagger";
 
     if ((options?.provider ?? options?.ui) === "scalar") {
-      await this.app.register(requireScalar(), {
+      await this.fastify.register(requireScalar(), {
         // ✅ lazy
         routePrefix,
         // No `content`: with @fastify/swagger registered (above), Scalar
@@ -394,7 +457,7 @@ export class MeghApplication implements IMeghApplication {
         },
       });
     } else {
-      await this.app.register(requireSwaggerUi(), {
+      await this.fastify.register(requireSwaggerUi(), {
         // ✅ lazy
         routePrefix,
         ...swaggerUiBranding({ logo: options?.logo, theme: options?.theme }),
@@ -420,7 +483,7 @@ export class MeghApplication implements IMeghApplication {
   useMiddlewares(middlewares: Constructor<MeghMiddleware>[]) {
     middlewares.forEach((m) => {
       const cls = Container.get<MeghMiddleware>(m);
-      this.app.addHook("preHandler", async (req, res) => {
+      this.fastify.addHook("preHandler", async (req, res) => {
         // Health probes must answer even when global middleware would reject
         // the request (an API key check, an IP allowlist).
         if ((req.routeOptions?.config as any)?.[SKIP_GLOBAL_MIDDLEWARE]) return;
@@ -523,7 +586,7 @@ export class MeghApplication implements IMeghApplication {
 
   /** Install the error and not-found handlers on the Fastify instance. @internal */
   installErrorHandling() {
-    this.errorHandler.install(this.app);
+    this.errorHandler.install(this.fastify);
   }
 
   /**
@@ -538,7 +601,7 @@ export class MeghApplication implements IMeghApplication {
     for (const [name, check] of Object.entries(options.checks ?? {})) {
       this.health.add(name, check);
     }
-    this.health.install(this.app, options, () => this.isDevelopment());
+    this.health.install(this.fastify, options, () => this.isDevelopment());
     return this;
   }
 
@@ -594,7 +657,7 @@ export class MeghApplication implements IMeghApplication {
   }
 
   useStaticFiles(options?: any) {
-    this.app.register(requireStatic(), options); // ✅ lazy
+    this.fastify.register(requireStatic(), options); // ✅ lazy
     return this;
   }
 
@@ -634,7 +697,7 @@ export class MeghApplication implements IMeghApplication {
       throw new SystemUseError("[Megh] useCompression() is already on.");
     }
     this.usesCompression = true;
-    this.app.register(requireCompress(), { global: true, ...options });
+    this.fastify.register(requireCompress(), { global: true, ...options });
     return this;
   }
 
@@ -658,7 +721,7 @@ export class MeghApplication implements IMeghApplication {
       throw new SystemUseError("[Megh] useMethodOverride() is already on.");
     }
     this.usesMethodOverride = true;
-    installMethodOverride(this.app);
+    installMethodOverride(this.fastify);
     return this;
   }
 
@@ -733,7 +796,7 @@ export class MeghApplication implements IMeghApplication {
 
   useSocketIo(options?: any) {
     this._hasWebsocket = true;
-    this.app.register(requireSocketIo(), options); // ✅ lazy
+    this.fastify.register(requireSocketIo(), options); // ✅ lazy
     return this;
   }
 
@@ -791,9 +854,10 @@ export class MeghApplication implements IMeghApplication {
   }
 
   private async _mapControllers() {
+    this.routesMapped = true;
     // Load the plugins registered so far (compression, CORS, ...) first:
     // some, like @fastify/compress, hook into routes as they are added.
-    await this.app.after();
+    await this.fastify.after();
     const safeControllers = (this.controllers ?? []).filter(
       (c) => c != null && typeof c === "function",
     );
@@ -927,7 +991,7 @@ export class MeghApplication implements IMeghApplication {
       process.removeListener("SIGINT", this.signalHandler);
       this.signalHandler = null;
     }
-    await this.app.close();
+    await this.fastify.close();
     // Stops every job and waits for runs already in progress.
     await this.scheduler.stopAll();
     await this._closeWorkers();
@@ -1007,11 +1071,11 @@ export class MeghApplication implements IMeghApplication {
     this.installRateLimiting();
     this.installErrorHandling();
 
-    await this.app.ready();
+    await this.fastify.ready();
 
     if (this._hasWebsocket) {
       // @ts-ignore
-      if (!this.app.io) {
+      if (!this.fastify.io) {
         throw new Error(
           "Socket.IO not initialized. Make sure fastify-socket.io is registered correctly.",
         );
@@ -1020,19 +1084,19 @@ export class MeghApplication implements IMeghApplication {
       try {
         const { SocketIoServer } = require("../realtime/websocket");
         // @ts-ignore
-        Container.set(SocketIoServer, this.app.io);
+        Container.set(SocketIoServer, this.fastify.io);
         // The app's authentication handler runs on the handshake and sets
         // socket.data.user, which @PrivateChannel listeners require.
         const authentication = this.router.getAuthenticationHandler();
         if (authentication) {
           const { handshakeAuthentication } = require("../realtime/handshake");
           // @ts-ignore
-          this.app.io.use(
+          this.fastify.io.use(
             handshakeAuthentication(Container.get(authentication) as any),
           );
         }
         // @ts-ignore
-        await this.app.io.on("connection", this.handleSocket.bind(this));
+        await this.fastify.io.on("connection", this.handleSocket.bind(this));
       } catch (e) {
         internalLogger("realtime").warn({ err: e }, "WebSocket setup error");
       }
@@ -1120,7 +1184,7 @@ export class MeghApplication implements IMeghApplication {
     const host = runOptions.host ?? process.env.HOST ?? "0.0.0.0";
     let address: string;
     try {
-      address = await this.app.listen({ port: listenPort, host });
+      address = await this.fastify.listen({ port: listenPort, host });
     } catch (err) {
       process.removeListener("SIGTERM", gracefulStop);
       process.removeListener("SIGINT", gracefulStop);

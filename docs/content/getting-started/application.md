@@ -45,16 +45,21 @@ const app = Megh.createApplication({
 });
 ```
 
-### The Fastify instance
+### Fastify plugins
 
-`app.app` is the underlying Fastify instance. Use it for anything Megh doesn't
-wrap, such as registering a Fastify plugin:
+Megh runs on Fastify but does not expose the Fastify instance. For anything
+Megh doesn't wrap, register a Fastify plugin with `registerFastifyPlugin()`:
 
 ```ts
 import etag from '@fastify/etag';
 
-app.app.register(etag);
+app.registerFastifyPlugin(etag);
+app.registerFastifyPlugin(etag, { weak: true }); // with options
 ```
+
+Call it before `run()` or inside an `onInit()` hook. Megh loads the plugins
+before it adds routes, so plugins that hook into routes, such as
+`@fastify/compress`, see every controller and inline route.
 
 ## Turning features on
 

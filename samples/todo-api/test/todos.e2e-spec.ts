@@ -14,7 +14,7 @@ describe('Todo API (e2e)', () => {
   });
 
   const request = (method: 'GET' | 'POST' | 'PATCH' | 'DELETE', url: string, payload?: object) =>
-    app.app.inject({ method, url, payload });
+    app.inject({ method, url, payload });
 
   it('creates, reads, updates and deletes a todo', async () => {
     const created = await request('POST', '/todos', { title: 'Write docs', priority: 'high' });

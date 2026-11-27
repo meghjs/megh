@@ -376,8 +376,8 @@ describe("experimental.compiledValidation", () => {
   });
 
   afterAll(async () => {
-    await fast.app.close();
-    await slow.app.close();
+    await fast.close();
+    await slow.close();
     vi.restoreAllMocks();
   });
 
@@ -433,8 +433,8 @@ describe("experimental.compiledValidation", () => {
   ];
 
   it.each(requests)("answers %s the same", async (_label, request) => {
-    const a = await fast.app.inject(request);
-    const b = await slow.app.inject(request);
+    const a = await fast.inject(request);
+    const b = await slow.inject(request);
     expect(a.statusCode).toBe(b.statusCode);
     expect(a.json()).toStrictEqual(b.json());
   });
@@ -442,9 +442,9 @@ describe("experimental.compiledValidation", () => {
   it("skips class-validator's validate() for compiled DTOs", async () => {
     const classValidator = require("class-validator");
     const spy = vi.spyOn(classValidator, "validate");
-    await fast.app.inject(requests[0][1]);
+    await fast.inject(requests[0][1]);
     expect(spy).not.toHaveBeenCalled();
-    await slow.app.inject(requests[0][1]);
+    await slow.inject(requests[0][1]);
     expect(spy).toHaveBeenCalledTimes(1);
     spy.mockRestore();
   });

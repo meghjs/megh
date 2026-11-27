@@ -89,7 +89,7 @@ async function boot(options: McpOptions) {
   app.useMcp(options);
   apps.push(app);
   await app.run(0);
-  const { port } = app.app.server.address() as AddressInfo;
+  const { port } = app.address() as AddressInfo;
   return { app, url: new URL(`http://127.0.0.1:${port}${options.path ?? "/mcp"}`) };
 }
 

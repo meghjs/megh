@@ -124,7 +124,7 @@ describe("controller pipeline order", () => {
     const app = await boot((a) =>
       a.useMiddlewares([GlobalMw]).useControllers([OrderedController]),
     );
-    const res = await app.app.inject({
+    const res = await app.inject({
       url: "/ordered",
       headers: { "x-user": "ada" },
     });
@@ -141,7 +141,7 @@ describe("controller pipeline order", () => {
 
   it("still denies after the middleware ran", async () => {
     const app = await boot((a) => a.useControllers([OrderedController]));
-    const res = await app.app.inject({ url: "/ordered" });
+    const res = await app.inject({ url: "/ordered" });
     expect(res.statusCode).toBe(403);
   });
 });
@@ -151,7 +151,7 @@ describe("functional routes", () => {
     const app = await boot((a) => {
       a.mapPatch("/fn/item", () => ({ patched: true }));
     });
-    const res = await app.app.inject({ method: "PATCH", url: "/fn/item" });
+    const res = await app.inject({ method: "PATCH", url: "/fn/item" });
     expect(res.statusCode).toBe(200);
     expect(res.json()).toEqual({ patched: true });
   });
@@ -163,7 +163,7 @@ describe("functional routes", () => {
         user: req.user,
       })).useMiddleware([InjectedMw, new SilentMw()]);
     });
-    const res = await app.app.inject({
+    const res = await app.inject({
       url: "/fn/trail",
       headers: { "x-user": "ada" },
     });
@@ -178,8 +178,8 @@ describe("functional routes", () => {
     const app = await boot((a) => {
       a.mapGet("/fn/secret", () => ({ ok: true })).authorized();
     });
-    expect((await app.app.inject({ url: "/fn/secret" })).statusCode).toBe(403);
-    const allowed = await app.app.inject({
+    expect((await app.inject({ url: "/fn/secret" })).statusCode).toBe(403);
+    const allowed = await app.inject({
       url: "/fn/secret",
       headers: { "x-user": "ada" },
     });
@@ -197,7 +197,7 @@ describe("functional routes", () => {
     const app = await boot((a) => {
       a.mapPost("/fn/create", () => Results.Created({ id: 1 }));
     });
-    const res = await app.app.inject({ method: "POST", url: "/fn/create" });
+    const res = await app.inject({ method: "POST", url: "/fn/create" });
     expect(res.statusCode).toBe(201);
     expect(res.json()).toEqual({ data: { id: 1 } });
   });
@@ -208,7 +208,7 @@ describe("functional routes", () => {
         throw new ConflictException("Taken");
       });
     });
-    const res = await app.app.inject({ url: "/fn/conflict" });
+    const res = await app.inject({ url: "/fn/conflict" });
     expect(res.statusCode).toBe(409);
     expect(res.json()).toMatchObject({ code: 409, message: "Taken" });
   });

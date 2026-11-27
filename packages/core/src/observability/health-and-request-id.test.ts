@@ -83,7 +83,7 @@ afterEach(async () => {
 describe("request IDs", () => {
   it("generates a UUID, echoes it, and exposes it to services", async () => {
     const app = await boot((a) => a.useControllers([RequestIdController]));
-    const res = await app.app.inject({ url: "/rid" });
+    const res = await app.inject({ url: "/rid" });
     const id = res.headers["x-request-id"];
     expect(id).toMatch(UUID);
     expect(res.json()).toEqual({ id });
@@ -91,7 +91,7 @@ describe("request IDs", () => {
 
   it("reuses a safe incoming x-request-id", async () => {
     const app = await boot((a) => a.useControllers([RequestIdController]));
-    const res = await app.app.inject({
+    const res = await app.inject({
       url: "/rid",
       headers: { "x-request-id": "edge-42.abc:1" },
     });
@@ -102,7 +102,7 @@ describe("request IDs", () => {
   it("replaces an unsafe or oversized incoming ID", async () => {
     const app = await boot((a) => a.useControllers([RequestIdController]));
     for (const bad of ["has space", "<script>", "x".repeat(129)]) {
-      const res = await app.app.inject({
+      const res = await app.inject({
         url: "/rid",
         headers: { "x-request-id": bad },
       });
@@ -114,7 +114,7 @@ describe("request IDs", () => {
     const app = await boot((a) => a.useControllers([RequestIdController]));
     const results = await Promise.all(
       ["a1", "b2", "c3"].map((id) =>
-        app.app.inject({ url: "/rid", headers: { "x-request-id": id } }),
+        app.inject({ url: "/rid", headers: { "x-request-id": id } }),
       ),
     );
     expect(results.map((r) => r.json().id)).toEqual(["a1", "b2", "c3"]);
@@ -135,7 +135,7 @@ describe("request IDs", () => {
     LoggerService.configure({ pretty: false, destination });
     try {
       const app = await boot((a) => a.useControllers([RequestIdController]));
-      await app.app.inject({
+      await app.inject({
         url: "/rid/log",
         headers: { "x-request-id": "log-1" },
       });
@@ -150,11 +150,11 @@ describe("request IDs", () => {
     const app = await boot((a) => a.useControllers([RequestIdController]), {
       requestId: { header: "x-correlation-id", generate: () => "gen-1" },
     });
-    const res = await app.app.inject({ url: "/rid" });
+    const res = await app.inject({ url: "/rid" });
     expect(res.headers["x-correlation-id"]).toBe("gen-1");
     expect(res.headers["x-request-id"]).toBeUndefined();
 
-    const passed = await app.app.inject({
+    const passed = await app.inject({
       url: "/rid",
       headers: { "x-correlation-id": "corr-9" },
     });
@@ -165,7 +165,7 @@ describe("request IDs", () => {
     const app = await boot((a) => a.useControllers([RequestIdController]), {
       requestId: false,
     });
-    const res = await app.app.inject({ url: "/rid" });
+    const res = await app.inject({ url: "/rid" });
     expect(res.headers["x-request-id"]).toBeUndefined();
     expect(res.json()).toEqual({});
   });
@@ -180,11 +180,11 @@ describe("health routes", () => {
         .useHealth({ checks: { cache: () => true } })
         .addHealthCheck("queue", async () => {}),
     );
-    const live = await app.app.inject({ url: "/health" });
+    const live = await app.inject({ url: "/health" });
     expect(live.statusCode).toBe(200);
     expect(live.json()).toEqual({ status: "ok" });
 
-    const ready = await app.app.inject({ url: "/ready" });
+    const ready = await app.inject({ url: "/ready" });
     expect(ready.statusCode).toBe(200);
     expect(ready.json()).toMatchObject({
       status: "ok",
@@ -204,7 +204,7 @@ describe("health routes", () => {
         },
       }),
     );
-    const res = await app.app.inject({ url: "/ready" });
+    const res = await app.inject({ url: "/ready" });
     expect(res.statusCode).toBe(503);
     expect(res.json()).toMatchObject({
       status: "error",
@@ -226,7 +226,7 @@ describe("health routes", () => {
         },
       }),
     );
-    const res = await app.app.inject({ url: "/ready" });
+    const res = await app.inject({ url: "/ready" });
     expect(res.json().checks.broken.error).toBe("connection refused");
   });
 
@@ -237,7 +237,7 @@ describe("health routes", () => {
         checks: { slow: () => new Promise(() => {}) },
       }),
     );
-    const res = await app.app.inject({ url: "/ready" });
+    const res = await app.inject({ url: "/ready" });
     expect(res.statusCode).toBe(503);
   });
 
@@ -245,9 +245,9 @@ describe("health routes", () => {
     const app = await boot((a) =>
       a.useHealth({ path: "/livez", readyPath: "/readyz" }),
     );
-    expect((await app.app.inject({ url: "/livez" })).statusCode).toBe(200);
-    expect((await app.app.inject({ url: "/readyz" })).statusCode).toBe(200);
-    expect((await app.app.inject({ url: "/health" })).statusCode).toBe(404);
+    expect((await app.inject({ url: "/livez" })).statusCode).toBe(200);
+    expect((await app.inject({ url: "/readyz" })).statusCode).toBe(200);
+    expect((await app.inject({ url: "/health" })).statusCode).toBe(404);
   });
 
   it("skips global middleware, so probes pass an API key check", async () => {
@@ -257,16 +257,16 @@ describe("health routes", () => {
         .useControllers([RequestIdController])
         .useHealth(),
     );
-    expect((await app.app.inject({ url: "/health" })).statusCode).toBe(200);
-    expect((await app.app.inject({ url: "/ready" })).statusCode).toBe(200);
-    expect((await app.app.inject({ url: "/rid" })).statusCode).toBe(401);
+    expect((await app.inject({ url: "/health" })).statusCode).toBe(200);
+    expect((await app.inject({ url: "/ready" })).statusCode).toBe(200);
+    expect((await app.inject({ url: "/rid" })).statusCode).toBe(401);
   });
 
   it("reports the Megh ORM database", async () => {
     const app = await boot((a) =>
       a.useMeghORM({ dialect: "sqlite", database: ":memory:" }).useHealth(),
     );
-    const res = await app.app.inject({ url: "/ready" });
+    const res = await app.inject({ url: "/ready" });
     expect(res.statusCode).toBe(200);
     expect(res.json().checks.database.status).toBe("up");
   });

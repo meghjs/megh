@@ -208,20 +208,18 @@ and a much larger ecosystem and community.
 
 ### Can I use Fastify plugins?
 
-Yes. `app.app` is the Fastify instance:
+Yes. Register them with `registerFastifyPlugin()`:
 
 ```ts
-import compress from '@fastify/compress';
+import etag from '@fastify/etag';
 
-app.onInit(async () => {
-  await app.app.register(compress);
-});
+app.registerFastifyPlugin(etag);
 ```
 
-Some plugins, such as `@fastify/compress`, attach themselves to each route
-as it is added. Megh adds routes during `run()`, after the `onInit` hooks, so
-registering and awaiting the plugin in `onInit` makes sure it sees every
-controller and inline route. Security headers and rate limits are built in:
+Call it before `run()` or inside an `onInit()` hook. Some plugins attach
+themselves to each route as it is added; Megh loads registered plugins before
+it adds routes, so they see every controller and inline route. Compression
+is built in with `useCompression()`. Security headers and rate limits are built in:
 see [Security Hardening](/production/security#add-security-headers).
 To package your own features as `use*` methods, write a
 [Megh plugin](/advanced/plugins).
