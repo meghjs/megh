@@ -224,7 +224,7 @@ describe("generated OpenAPI document", () => {
         if (!before[sig].includes(l)) process.removeListener(sig, l);
       }
     }
-    const res = await (app as any).app.inject({
+    const res = await app.inject({
       method: "GET",
       url: "/swagger/json",
     });
@@ -232,7 +232,7 @@ describe("generated OpenAPI document", () => {
   });
 
   afterAll(async () => {
-    await (app as any).app.close();
+    await app.close();
   });
 
   it("documents a @Body() DTO with resolvable $refs", () => {
@@ -286,7 +286,7 @@ describe("generated OpenAPI document", () => {
   });
 
   it("does not change request handling", async () => {
-    const res = await (app as any).app.inject({
+    const res = await app.inject({
       method: "POST",
       url: "/rb/inline",
       payload: {},

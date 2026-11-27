@@ -183,6 +183,8 @@ export interface ErrorHandlerOptions {
  */
 export class MeghErrorHandler {
   private readonly globalFilters: ResolvedFilter[] = [];
+  /** Megh's own filters (the login redirect), after the app's. */
+  private readonly fallbackFilters: ResolvedFilter[] = [];
   private readonly isDevelopment: () => boolean;
   private logger: ErrorLogger | false;
 
@@ -195,6 +197,12 @@ export class MeghErrorHandler {
   /** Append global filters. */
   addFilters(filters: ExceptionFilterLike[]) {
     for (const f of filters) this.globalFilters.push(resolveFilter(f));
+    return this;
+  }
+
+  /** @internal Add a filter that runs after every app filter. */
+  addFallbackFilter(filter: ExceptionFilterLike) {
+    this.fallbackFilters.push(resolveFilter(filter));
     return this;
   }
 
@@ -225,7 +233,11 @@ export class MeghErrorHandler {
       (request.routeOptions?.config as any)?.[ROUTE_FILTERS_CONFIG_KEY] ?? [];
 
     let current = error;
-    for (const filter of [...routeFilters, ...this.globalFilters]) {
+    for (const filter of [
+      ...routeFilters,
+      ...this.globalFilters,
+      ...this.fallbackFilters,
+    ]) {
       if (!accepts(filter, current)) continue;
 
       const response = defaultErrorResponse(current, isDevelopment);

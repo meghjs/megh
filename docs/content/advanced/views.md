@@ -97,6 +97,9 @@ const inline = getViewEngine().renderString("Hi {{ name }}", { name: "Ana" });
 | `@js(const x = 1)` / `@js … @endjs`                                                                | Raw JS (Blade's `@php`)                                  |
 | `@json(value)`                                                                                     | JSON that's safe inside `<script>`                       |
 | `@csrf` `@method('PUT')`                                                                           | Hidden form inputs (`@csrf` reads `csrfToken`), see [Forms](#forms) |
+| `@auth` … `@else` … `@endauth` / `@guest` … `@endguest`                                            | Logged in or not, per `useAuthentication()`. See [Sessions](/advanced/sessions#in-views) |
+| `@session('status')` … `{{ value }}` … `@endsession`                                               | A session value (flashed ones too), only when set        |
+| `@can('edit-post', post)` … `@else` … `@endcan` / `@cannot(...)` … `@endcannot`                    | Permission checks with [gates](/advanced/sessions#gates) |
 | `@include('partials.nav', { extra })`                                                              | Render another view                                      |
 | `@extends('layouts.app')`                                                                          | Use a layout                                             |
 | `@section('name')` … `@endsection` / `@section('title', 'Home')`                                   | Define a section                                         |

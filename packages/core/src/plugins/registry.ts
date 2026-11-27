@@ -1,4 +1,5 @@
 import type { MeghApplication } from "../core/application";
+import { fastifyOf } from "../core/internal";
 import { Container } from "../di";
 import { LoggerService } from "../observability/logger";
 import { SystemUseError } from "../common/exceptions/system-exception";
@@ -75,7 +76,7 @@ function createContext(
   return {
     app,
     container: Container,
-    http: app.app,
+    http: fastifyOf(app),
     logger: LoggerService.child({ plugin: plugin.name }),
     extend(name, method) {
       if (typeof method !== "function") {

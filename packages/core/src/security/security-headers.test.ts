@@ -140,13 +140,13 @@ describe("useSecurityHeaders", () => {
   it("sets the headers on success, error and 404 responses", async () => {
     const app = await boot((a) => a.useSecurityHeaders());
     for (const url of ["/sh", "/sh/fail", "/missing"]) {
-      const res = await app.app.inject({ url });
+      const res = await app.inject({ url });
       expect(res.headers["x-content-type-options"], url).toBe("nosniff");
       expect(res.headers["content-security-policy"], url).toContain(
         "default-src 'self'",
       );
     }
-    expect((await app.app.inject({ url: "/sh/fail" })).statusCode).toBe(400);
+    expect((await app.inject({ url: "/sh/fail" })).statusCode).toBe(400);
   });
 
   it("lets a route override a header", async () => {
@@ -157,7 +157,7 @@ describe("useSecurityHeaders", () => {
         return { ok: true };
       });
     });
-    const res = await app.app.inject({ url: "/own" });
+    const res = await app.inject({ url: "/own" });
     expect(res.headers["x-frame-options"]).toBe("DENY");
   });
 
@@ -166,7 +166,7 @@ describe("useSecurityHeaders", () => {
       const app = await boot((a) =>
         a.useSecurityHeaders().useOpenApi({ provider, routePrefix: "/docs" }),
       );
-      const docs = await app.app.inject({ url: "/docs/" });
+      const docs = await app.inject({ url: "/docs/" });
       expect(docs.statusCode, provider).toBe(200);
       const csp = docs.headers["content-security-policy"];
       // Swagger UI sends its own policy; Scalar gets none from Megh.
@@ -175,7 +175,7 @@ describe("useSecurityHeaders", () => {
       expect(docs.headers["x-content-type-options"]).toBe("nosniff");
       // Everything else keeps Megh's policy, including look-alike paths.
       for (const url of ["/sh", "/docsx"]) {
-        const res = await app.app.inject({ url });
+        const res = await app.inject({ url });
         expect(res.headers["content-security-policy"], url).toContain(
           "form-action 'self'",
         );
@@ -186,7 +186,7 @@ describe("useSecurityHeaders", () => {
 
   it("sends nothing extra without it", async () => {
     const app = await boot(() => {});
-    const res = await app.app.inject({ url: "/sh" });
+    const res = await app.inject({ url: "/sh" });
     expect(res.headers["content-security-policy"]).toBeUndefined();
     expect(res.headers["x-content-type-options"]).toBeUndefined();
   });

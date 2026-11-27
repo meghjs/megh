@@ -66,7 +66,7 @@ const hit = (
   url = "/rl",
   method: "GET" | "POST" = "GET",
   ip?: string,
-) => app.app.inject({ url, method, ...(ip && { remoteAddress: ip }) });
+) => app.inject({ url, method, ...(ip && { remoteAddress: ip }) });
 
 beforeEach(() => {
   vi.spyOn(console, "log").mockImplementation(() => {});
@@ -181,7 +181,7 @@ describe("useRateLimit", () => {
       }),
     );
     const as = (key: string, internal = false) =>
-      app.app.inject({
+      app.inject({
         url: "/rl",
         headers: { "x-api-key": key, ...(internal && { "x-internal": "1" }) },
       });
@@ -264,7 +264,7 @@ describe("rate limiting behind a proxy (#133)", () => {
   // nginx and AWS ALB append the real client to X-Forwarded-For, so the
   // leftmost entry is whatever the client sent.
   const spoofed = (app: MeghApplication, fake: string) =>
-    app.app.inject({
+    app.inject({
       url: "/rl/login",
       method: "POST",
       remoteAddress: "10.0.0.1",

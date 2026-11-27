@@ -129,9 +129,9 @@ async function request(
 ) {
   const app = await boot(setup);
   try {
-    return await app.app.inject(opts as any);
+    return await app.inject(opts as any);
   } finally {
-    await app.app.close();
+    await app.close();
   }
 }
 
@@ -381,7 +381,7 @@ describe("error handling", () => {
           /before run/,
         );
       } finally {
-        await app.app.close();
+        await app.close();
       }
     });
 
@@ -427,7 +427,7 @@ describe("error handling", () => {
         expect(crash.statusCode).toBe(500);
         expect(crash.body).not.toContain("10.0.0.5");
       } finally {
-        await app.app.close();
+        await app.close();
       }
     });
   });

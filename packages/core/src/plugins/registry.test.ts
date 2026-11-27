@@ -8,6 +8,7 @@ import { MeghApplicationOptions } from "../core/interfaces";
 import { Container } from "../di";
 import { discoverPlugins } from "./discovery";
 import { definePlugin, type MeghPlugin } from "./plugin";
+import { fastifyOf } from "../core/internal";
 
 const apps: MeghApplication[] = [];
 // A fresh app per test; getApp() would return a shared singleton.
@@ -55,7 +56,7 @@ describe("registering plugins", () => {
 
     expect(seen.app).toBe(app);
     expect(seen.container).toBe(Container);
-    expect(seen.http).toBe(app.app);
+    expect(seen.http).toBe(fastifyOf(app));
     expect(typeof seen.logger.info).toBe("function");
   });
 

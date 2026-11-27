@@ -239,14 +239,14 @@ describe("request pipeline", () => {
       } as any);
       const app = await boot((a) => a.useControllers([GuardedController]));
       try {
-        const res = await app.app.inject({ method: "GET", url: "/guarded" });
+        const res = await app.inject({ method: "GET", url: "/guarded" });
         expect(res.statusCode).toBe(403);
         expect(warn).toHaveBeenCalledWith(
           expect.stringContaining("no authorization handler"),
         );
       } finally {
         child.mockRestore();
-        await app.app.close();
+        await app.close();
       }
     });
 
@@ -257,11 +257,11 @@ describe("request pipeline", () => {
           .useControllers([GuardedController]),
       );
       try {
-        const denied = await app.app.inject({ method: "GET", url: "/guarded" });
+        const denied = await app.inject({ method: "GET", url: "/guarded" });
         expect(denied.statusCode).toBe(403);
         expect(denied.body).not.toContain("ok");
 
-        const allowed = await app.app.inject({
+        const allowed = await app.inject({
           method: "GET",
           url: "/guarded",
           headers: { "x-allow": "yes" },
@@ -269,7 +269,7 @@ describe("request pipeline", () => {
         expect(allowed.statusCode).toBe(200);
         expect(allowed.json()).toEqual({ ok: true });
       } finally {
-        await app.app.close();
+        await app.close();
       }
     });
 
@@ -281,7 +281,7 @@ describe("request pipeline", () => {
       await expect(app.run(0)).rejects.toThrow(
         /No authorization handler registered/,
       );
-      await app.app.close();
+      await app.close();
     });
   });
 
@@ -294,24 +294,24 @@ describe("request pipeline", () => {
     });
 
     afterAll(async () => {
-      await app.app.close();
+      await app.close();
       (console.log as any).mockRestore?.();
     });
 
     it("resolves class middleware through DI on a controller", async () => {
-      const res = await app.app.inject({ method: "GET", url: "/scoped/class" });
+      const res = await app.inject({ method: "GET", url: "/scoped/class" });
       expect(res.statusCode).toBe(200);
       expect(res.json()).toEqual({ trail: ["hi"] });
     });
 
     it("runs class-level before route-level, mixing classes and instances", async () => {
-      const res = await app.app.inject({ method: "GET", url: "/scoped/route" });
+      const res = await app.inject({ method: "GET", url: "/scoped/route" });
       expect(res.statusCode).toBe(200);
       expect(res.json()).toEqual({ trail: ["hi", "route"] });
     });
 
     it("stops the request when a route middleware sends a response", async () => {
-      const res = await app.app.inject({
+      const res = await app.inject({
         method: "GET",
         url: "/scoped/route",
         headers: { "x-block": "yes" },
@@ -330,12 +330,12 @@ describe("request pipeline", () => {
     });
 
     afterAll(async () => {
-      await app.app.close();
+      await app.close();
       (console.log as any).mockRestore?.();
     });
 
     it("passes the validated DTO instance to the handler", async () => {
-      const res = await app.app.inject({
+      const res = await app.inject({
         method: "POST",
         url: "/open/users",
         payload: { name: "Ada", age: 36 },
@@ -347,7 +347,7 @@ describe("request pipeline", () => {
     });
 
     it("rejects properties the DTO does not declare", async () => {
-      const res = await app.app.inject({
+      const res = await app.inject({
         method: "POST",
         url: "/open/users",
         payload: { name: "Ada", isAdmin: true },
@@ -367,7 +367,7 @@ describe("request pipeline", () => {
     });
 
     it("returns a readable message instead of undefined", async () => {
-      const res = await app.app.inject({
+      const res = await app.inject({
         method: "POST",
         url: "/open/users",
         payload: { name: "Ada", handle: "ada" },
@@ -391,7 +391,7 @@ describe("request pipeline", () => {
     });
 
     it("rejects an array body for an object DTO", async () => {
-      const res = await app.app.inject({
+      const res = await app.inject({
         method: "POST",
         url: "/open/users",
         payload: [{ name: "Ada" }],
@@ -400,20 +400,20 @@ describe("request pipeline", () => {
     });
 
     it("passes the transformed query DTO to the handler", async () => {
-      const res = await app.app.inject({
+      const res = await app.inject({
         method: "GET",
         url: "/open/users?page=2",
       });
       expect(res.statusCode).toBe(200);
       expect(res.json()).toEqual({ isInstance: true, page: 2 });
 
-      const bad = await app.app.inject({
+      const bad = await app.inject({
         method: "GET",
         url: "/open/users?page=0",
       });
       expect(bad.statusCode).toBe(400);
 
-      const extra = await app.app.inject({
+      const extra = await app.inject({
         method: "GET",
         url: "/open/users?admin=1",
       });
@@ -421,7 +421,7 @@ describe("request pipeline", () => {
     });
 
     it("sanitizes the Content-Disposition filename", async () => {
-      const res = await app.app.inject({
+      const res = await app.inject({
         method: "GET",
         url: "/open/download",
       });
@@ -442,9 +442,9 @@ describe("request pipeline", () => {
       else process.env.NODE_ENV = env;
       const app = await boot((a) => a.useControllers([OpenController]));
       try {
-        return await app.app.inject({ method: "GET", url });
+        return await app.inject({ method: "GET", url });
       } finally {
-        await app.app.close();
+        await app.close();
       }
     }
 
@@ -503,13 +503,11 @@ describe("request pipeline", () => {
         for (const l of process.listeners(sig))
           if (!before[sig].includes(l)) process.removeListener(sig, l);
       }
-      spec = (
-        await (app as any).app.inject({ method: "GET", url: "/swagger/json" })
-      ).json();
+      spec = (await app.inject({ method: "GET", url: "/swagger/json" })).json();
     });
 
     afterAll(async () => {
-      await (app as any).app.close();
+      await app.close();
     });
 
     it("documents the pipeline routes", () => {

@@ -160,3 +160,11 @@ app.mapGet('/status', () => ({ ok: true })).public();
 Middleware runs first (global, then `@UseMiddleware`), then authentication,
 then the class and method `@Authorized` checks, then validation. See
 [Middleware](/core-concept/middleware#pipeline-order).
+
+## Server-rendered apps
+
+For an app with views, keep the logged-in user in a
+[session](/advanced/sessions#logging-in). With `loginPath`, browsers are
+redirected to the login page instead of getting a 401, and
+[gates](/advanced/sessions#gates) add permission checks you can use in views
+with `@can`.

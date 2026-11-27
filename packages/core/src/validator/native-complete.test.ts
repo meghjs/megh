@@ -833,12 +833,12 @@ describe("async validators over HTTP", () => {
   });
 
   afterAll(async () => {
-    await app.app.close();
+    await app.close();
     vi.restoreAllMocks();
   });
 
   it("rejects a taken name with 400", async () => {
-    const res = await app.app.inject({
+    const res = await app.inject({
       method: "POST",
       url: "/signup",
       payload: { username: "taken" },
@@ -850,7 +850,7 @@ describe("async validators over HTTP", () => {
   });
 
   it("accepts a free name", async () => {
-    const res = await app.app.inject({
+    const res = await app.inject({
       method: "POST",
       url: "/signup",
       payload: { username: "free" },

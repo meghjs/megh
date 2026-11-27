@@ -24,11 +24,14 @@ import {
   REQUEST_BODY_META_KEY,
   REQUEST_HEADER_META_KEY,
   REQUEST_USER_META_KEY,
+  REQUEST_SESSION_META_KEY,
   AUTHORIZATION_META_KEY,
   PUBLIC_META_KEY,
   REQUEST_BODY_FILE_KEY,
   REQUEST_BODY_FILES_KEY,
 } from "../common/container";
+import { SystemUseError } from "../common/exceptions/system-exception";
+import { sessionOf } from "../http/session";
 import { MethodParamMeta, IRequest, FuncRoute } from "./types";
 import {
   BadRequestException,
@@ -546,6 +549,8 @@ export class MeghRouter {
         Reflect.getMetadata(REQUEST_HEADER_META_KEY, prototype, method) || [],
       currentUser:
         Reflect.getMetadata(REQUEST_USER_META_KEY, prototype, method) || [],
+      session:
+        Reflect.getMetadata(REQUEST_SESSION_META_KEY, prototype, method) || [],
     };
 
     // Pre-compute args array size once at boot (avoids 8x .map + spread + Math.max per request).
@@ -555,6 +560,7 @@ export class MeghRouter {
       meta.query,
       meta.body,
       meta.currentUser,
+      meta.session ?? [],
       meta.headers,
       meta.request ?? [],
       meta.file ?? [],
@@ -1024,6 +1030,17 @@ export class MeghRouter {
 
     for (let i = 0; i < meta.currentUser.length; i++) {
       args[meta.currentUser[i].index] = (req as any).user;
+    }
+
+    const sessions = meta.session ?? [];
+    for (let i = 0; i < sessions.length; i++) {
+      const session = sessionOf(req);
+      if (!session) {
+        throw new SystemUseError(
+          "[Megh] @Session() needs sessions: call app.useSession() first.",
+        );
+      }
+      args[sessions[i].index] = session;
     }
 
     for (let i = 0; i < meta.headers.length; i++) {

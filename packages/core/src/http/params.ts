@@ -11,6 +11,7 @@ import {
   REQUEST_BODY_META_KEY,
   REQUEST_HEADER_META_KEY,
   REQUEST_USER_META_KEY,
+  REQUEST_SESSION_META_KEY,
 } from "../common/container";
 import { getDataType, isClassValidatorClass } from "../common/helpers";
 import { isMeghValidatorClass } from "../validator/metadata";
@@ -107,6 +108,9 @@ function createParamDecorator(
         case "route:header":
           metaKey = REQUEST_HEADER_META_KEY;
           break;
+        case "route:session":
+          metaKey = REQUEST_SESSION_META_KEY;
+          break;
         default:
           throw new Error(`Unknown param decorator type: ${String(type)}`);
       }
@@ -155,6 +159,13 @@ export const Query = createParamDecorator("route:query");
 export const Body = createParamDecorator("route:body");
 export const Header = createParamDecorator("route:header");
 export const AuthUser = createParamDecorator("route:user");
+/**
+ * The visitor's {@link MeghSession}. Needs `app.useSession()`.
+ *
+ *   @Post("/login")
+ *   login(@Body() form: LoginForm, @Session() session: MeghSession) { ... }
+ */
+export const Session = createParamDecorator("route:session");
 
 /**
  * Fail at boot when a route's `@Body()` or `@Query()` parameter has no type
