@@ -84,7 +84,7 @@ describe("@Query() in the generated OpenAPI document", () => {
         if (!before[sig].includes(l)) process.removeListener(sig, l);
       }
     }
-    const res = await (app as any).app.inject({
+    const res = await app.inject({
       method: "GET",
       url: "/swagger/json",
     });
@@ -92,7 +92,7 @@ describe("@Query() in the generated OpenAPI document", () => {
   });
 
   afterAll(async () => {
-    await (app as any).app.close();
+    await app.close();
   });
 
   it("documents each property of a @Query() DTO, plus @Query('key')", () => {
@@ -141,7 +141,7 @@ describe("@Query() in the generated OpenAPI document", () => {
   });
 
   it("does not change request handling", async () => {
-    const res = await (app as any).app.inject({
+    const res = await app.inject({
       method: "GET",
       url: "/qp/keys?q=hi",
     });

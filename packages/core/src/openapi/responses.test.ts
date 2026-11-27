@@ -136,13 +136,11 @@ describe("documented responses", () => {
       for (const l of process.listeners(sig))
         if (!before[sig].includes(l)) process.removeListener(sig, l);
     }
-    spec = (
-      await (app as any).app.inject({ method: "GET", url: "/swagger/json" })
-    ).json();
+    spec = (await app.inject({ method: "GET", url: "/swagger/json" })).json();
   });
 
   afterAll(async () => {
-    await (app as any).app.close();
+    await app.close();
   });
 
   it("documents a model from its column decorators", () => {
@@ -282,8 +280,7 @@ describe("documented responses", () => {
   });
 
   it("documents responses without changing what is sent", async () => {
-    const inject = (url: string) =>
-      (app as any).app.inject({ method: "GET", url });
+    const inject = (url: string) => app.inject({ method: "GET", url });
     // Fields outside the documented schema are still sent.
     expect((await inject("/rs/users/7")).json()).toEqual({
       id: 7,

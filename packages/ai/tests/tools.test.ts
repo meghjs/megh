@@ -262,8 +262,8 @@ describe("ToolSet injection", () => {
     expect(app.tools().filter({ tags: ["orders"] }).filter({ tags: ["admin"] }).list().map((t) => t.name)).toEqual([
       "order_refund",
     ]);
-    expect((await app.app.inject({ url: "/assistant/tools" })).json()).toEqual(["order_find", "order_refund"]);
-    expect((await app.app.inject({ url: "/assistant/ask/9" })).json()).toEqual({ id: "9", expand: null });
+    expect((await app.inject({ url: "/assistant/tools" })).json()).toEqual(["order_find", "order_refund"]);
+    expect((await app.inject({ url: "/assistant/ask/9" })).json()).toEqual({ id: "9", expand: null });
   });
 });
 

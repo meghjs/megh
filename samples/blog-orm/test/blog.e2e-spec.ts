@@ -12,7 +12,7 @@ const migrations = Object.fromEntries(
 
 type Method = 'GET' | 'POST' | 'PATCH' | 'DELETE';
 const call = async (method: Method, url: string, payload?: object) => {
-  const res = await app.app.inject({ method, url, payload });
+  const res = await app.inject({ method, url, payload });
   return { status: res.statusCode, body: res.body ? res.json() : undefined };
 };
 

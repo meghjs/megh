@@ -57,7 +57,7 @@ export class MeghTest {
       (method: InjectOptions["method"]) =>
       async (url: string, options?: InjectOptions) => {
         await mapped;
-        return app.app.inject({ method, url, ...options });
+        return app.inject({ method, url, ...options });
       };
 
     return {

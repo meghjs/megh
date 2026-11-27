@@ -129,7 +129,7 @@ afterEach(async () => {
 describe("status codes", () => {
   const get = async (method: "GET" | "POST", url: string) => {
     const app = await boot((a) => a.useControllers([StatusController]));
-    return app.app.inject({ method, url });
+    return app.inject({ method, url });
   };
 
   it("@HttpCode sets the status of a plain result", async () => {
@@ -182,7 +182,7 @@ describe("@All", () => {
   it("registers and answers every method", async () => {
     const app = await boot((a) => a.useControllers([StatusController]));
     for (const method of ["GET", "POST", "PUT", "PATCH", "DELETE"] as const) {
-      const res = await app.app.inject({ method, url: "/status/any" });
+      const res = await app.inject({ method, url: "/status/any" });
       expect(res.statusCode, method).toBe(200);
     }
   });
@@ -196,10 +196,10 @@ describe("controllers with the same class name", () => {
     const app = await boot((a) =>
       a.useControllers([FirstSameName, SecondSameName]),
     );
-    expect((await app.app.inject("/first")).json()).toEqual({
+    expect((await app.inject("/first")).json()).toEqual({
       value: "first",
     });
-    expect((await app.app.inject("/second")).json()).toEqual({
+    expect((await app.inject("/second")).json()).toEqual({
       value: "second",
     });
   });
@@ -212,7 +212,7 @@ describe("@UploadFile", () => {
     const app = await boot((a) =>
       a.useMultipart().useControllers([UploadController]),
     );
-    const res = await app.app.inject({
+    const res = await app.inject({
       method: "POST",
       url: "/uploads",
       ...multipart("doc", "notes.txt", "hello"),
@@ -234,17 +234,17 @@ describe("run()", () => {
   it("listens on 0.0.0.0 by default", async () => {
     delete process.env.HOST;
     const app = await boot(() => {});
-    expect((app.app.server.address() as any).address).toBe("0.0.0.0");
+    expect((app.address() as any).address).toBe("0.0.0.0");
   });
 
   it("takes the host from options, then HOST", async () => {
     process.env.HOST = "0.0.0.0";
     const app = await boot(() => {}, { host: "127.0.0.1" });
-    expect((app.app.server.address() as any).address).toBe("127.0.0.1");
+    expect((app.address() as any).address).toBe("127.0.0.1");
 
     process.env.HOST = "127.0.0.1";
     const fromEnv = await boot(() => {});
-    expect((fromEnv.app.server.address() as any).address).toBe("127.0.0.1");
+    expect((fromEnv.address() as any).address).toBe("127.0.0.1");
   });
 
   it("still accepts a callback as the second argument", async () => {

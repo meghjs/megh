@@ -43,11 +43,11 @@ describe("path and query casting by declared type", () => {
   });
 
   afterAll(async () => {
-    await app.app.close();
+    await app.close();
     (console.log as any).mockRestore?.();
   });
 
-  const get = (url: string) => app.app.inject({ method: "GET", url });
+  const get = (url: string) => app.inject({ method: "GET", url });
 
   it("keeps a numeric-looking string param and query as strings", async () => {
     const res = await get("/cast/str/42?tag=true");
