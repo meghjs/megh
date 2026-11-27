@@ -11,7 +11,6 @@ const sidebar: DefaultTheme.SidebarItem[] = [
       { text: 'Installation', link: '/getting-started/installation' },
       { text: 'Quick Start', link: '/getting-started/usage' },
       { text: 'Application', link: '/getting-started/application' },
-      { text: 'Editor Setup', link: '/getting-started/editors' },
     ],
   },
   {

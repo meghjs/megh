@@ -15,12 +15,15 @@ npm i @meghjs/ai@~0.7.3   # optional: LLM tools and an MCP server for your app
 
 0.7.3 adds [sessions](/advanced/sessions) for server-rendered apps, with a
 login redirect, gates and the `@auth`, `@guest`, `@can` and `@session` view
-directives, and [editor support](/getting-started/editors) for `.megh.html`
+directives, and [editor support](/advanced/views#editor-setup) for `.megh.html`
 templates in VS Code, Neovim and other LSP editors. See
 [New in 0.7.3](#new-in-0-7-3).
 
 It has one breaking change: `app.app`, the Fastify instance, is no longer
 public. Read [Breaking in 0.7.3](#breaking-in-0-7-3) if your code uses it.
+
+`@meghjs/data` is not part of 0.7.3. It stays at 0.7.2, which works with
+`@meghjs/core` 0.7.3.
 
 Coming from 0.7.1? 0.7.2 adds [`@meghjs/ai`](/ai/tools), which turns routes
 into LLM tools and serves them over MCP, and gives coding agents an
@@ -105,7 +108,7 @@ All of them except `@session` take `@else`. See [Views](/advanced/views#syntax).
 
 ### Editor support for templates
 
-[Editor Setup](/getting-started/editors) covers the VS Code extension, the new
+[Editor setup](/advanced/views#editor-setup) covers the VS Code extension, the new
 Neovim plugin ([`megh.nvim`](https://github.com/meghjs/megh.nvim)), and the
 Megh language server for other LSP editors. They give highlighting,
 completion, hover, formatting and validation for `.megh.html` files. Typing
