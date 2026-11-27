@@ -19,6 +19,8 @@ import {
   DidChangeWatchedFilesNotification,
   Hover,
   InitializeResult,
+  InsertTextFormat,
+  InsertTextMode,
   MarkupKind,
   Position,
   ProposedFeatures,
@@ -30,6 +32,7 @@ import { TextDocument } from 'vscode-languageserver-textdocument';
 import { MeghCompleter } from './complete';
 import { EXTENSION, findViewsRoot, scanComponents } from './components';
 import type { FormatOptions } from './format';
+import type { DirectiveItem } from './directive-complete';
 import type { CodeItem } from './megh-code';
 import { ProjectIndex, SourceFile } from './project';
 
@@ -68,8 +71,8 @@ connection.onInitialize((params): InitializeResult => {
     capabilities: {
       textDocumentSync: TextDocumentSyncKind.Incremental,
       completionProvider: {
-        // The HTML triggers, plus "." for members and quotes for view names.
-        triggerCharacters: ['<', ' ', ':', '"', "'", '=', '/', '.', '-'],
+        // The HTML triggers, plus "." for members, quotes for view names and "@" for directives.
+        triggerCharacters: ['<', ' ', ':', '"', "'", '=', '/', '.', '-', '@'],
       },
       hoverProvider: true,
       documentFormattingProvider: true,
@@ -192,8 +195,27 @@ connection.onCompletion(({ textDocument, position }) => {
   const result = completer.complete(document.uri, document.getText(), position, view);
   if (!result) return null;
   if (result.type === 'html') return result.list;
+  if (result.type === 'directive') {
+    return result.items.map((item) => toDirectiveCompletion(item, document, position));
+  }
   return result.items.map((item) => toCompletionItem(item, document, position));
 });
+
+function toDirectiveCompletion(item: DirectiveItem, document: TextDocument, position: Position): CompletionItem {
+  return {
+    label: item.label,
+    kind: CompletionItemKind.Keyword,
+    detail: item.detail,
+    documentation: { kind: MarkupKind.Markdown, value: item.documentation },
+    sortText: item.sortText,
+    preselect: item.preselect,
+    // The label starts with "@", so clients filter on what was typed after it too.
+    filterText: item.label,
+    insertTextFormat: InsertTextFormat.Snippet,
+    insertTextMode: InsertTextMode.adjustIndentation,
+    textEdit: TextEdit.replace({ start: document.positionAt(item.start), end: position }, item.snippet),
+  };
+}
 
 function toCompletionItem(item: CodeItem, document: TextDocument, position: Position): CompletionItem {
   const kinds = {

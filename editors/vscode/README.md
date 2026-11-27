@@ -11,6 +11,10 @@ arguments, `:prop="expr"` and `@js` are JavaScript; `@react ... @endreact` is JS
 Built-in directives and your own `engine.directive()` ones (written `@name(`).
 
 **Completion.**
+- Directives after `@`, with docs. A block directive on its own line is
+  inserted with its arguments and closer (`@foreach(items as item)` …
+  `@endforeach`). Inside an open block, its closer comes first, and `@else` /
+  `@elseif` only where they're allowed.
 - HTML tags, attributes, values and closing tags, with VS Code's HTML data and
   docs. Works next to Megh syntax (`<input value="{{ x }}" |`).
 - `<x-` lists the components under the nearest `components/` folder, with
@@ -45,8 +49,8 @@ unclosed construct or unbalanced blocks, formatting does nothing.
   branches and closed once after `@endif` are fine.
 
 **Also:** closing tags inserted after `>`, `{{-- --}}` comment toggling,
-folding for block directives, and snippets (`@foreach`, `@extends`,
-`form:method`, `form:upload`, ...).
+folding for block directives, and snippets (`@ifelse`, `@extends` page,
+`@react` island, `form:method`, `form:upload`, ...).
 
 ## Settings
 
