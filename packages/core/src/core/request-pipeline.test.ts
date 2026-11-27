@@ -485,4 +485,81 @@ describe("request pipeline", () => {
       expect(res.body).toContain("secret");
     });
   });
+
+  describe("OpenAPI output", () => {
+    let app: MeghApplication;
+    let spec: any;
+
+    beforeAll(async () => {
+      app = MeghApplication.getInternalApp();
+      app.useOpenApi({ info: { title: "t", version: "1" } });
+      app.useControllers([OpenController]);
+      const before = {
+        SIGTERM: process.listeners("SIGTERM"),
+        SIGINT: process.listeners("SIGINT"),
+      };
+      await app.run(0);
+      for (const sig of ["SIGTERM", "SIGINT"] as const) {
+        for (const l of process.listeners(sig))
+          if (!before[sig].includes(l)) process.removeListener(sig, l);
+      }
+      spec = (
+        await (app as any).app.inject({ method: "GET", url: "/swagger/json" })
+      ).json();
+    });
+
+    afterAll(async () => {
+      await (app as any).app.close();
+    });
+
+    it("documents the pipeline routes", () => {
+      expect(spec.openapi).toMatch(/^3\./);
+      expect(Object.keys(spec.paths).sort()).toEqual([
+        "/open/crash",
+        "/open/download",
+        "/open/internal",
+        "/open/not-found",
+        "/open/users",
+      ]);
+      expect(Object.keys(spec.paths["/open/users"]).sort()).toEqual([
+        "get",
+        "post",
+      ]);
+    });
+
+    it("documents the @Body() DTO as a required JSON body with a $ref", () => {
+      expect(spec.paths["/open/users"].post.requestBody).toEqual({
+        required: true,
+        content: {
+          "application/json": {
+            schema: { $ref: "#/components/schemas/CreateUserDto" },
+          },
+        },
+      });
+      expect(spec.components.schemas.CreateUserDto).toEqual({
+        type: "object",
+        properties: {
+          name: { type: "string" },
+          age: { type: "integer" },
+          handle: { type: "string" },
+        },
+      });
+    });
+
+    it("documents the @Query() DTO as query parameters", () => {
+      const params = spec.paths["/open/users"].get.parameters ?? [];
+      expect(params).toEqual([
+        {
+          name: "page",
+          in: "query",
+          required: false,
+          schema: { type: "integer", minimum: 1 },
+        },
+      ]);
+    });
+
+    it("adds no query parameters to routes without @Query()", () => {
+      expect(spec.paths["/open/download"].get.parameters ?? []).toEqual([]);
+    });
+  });
 });
