@@ -16,6 +16,8 @@ const pkgs = files.map((file) => ({ file, json: JSON.parse(fs.readFileSync(file,
 const versions = new Map(pkgs.map(({ json }) => [json.name, json.version]));
 
 for (const { file, json } of pkgs) {
+  // Private packages are not versioned or published (lerna.json "private": false).
+  if (json.private) continue;
   let changed = false;
   for (const name of Object.keys(json.peerDependencies ?? {})) {
     const range = versions.has(name) && `^${versions.get(name)}`;

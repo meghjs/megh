@@ -5,6 +5,7 @@
   "command": {
     "version": {
       "allowBranch": "main",
+      "private": false,
       "conventionalCommits": true,
       "premajorVersionBump": "force-patch",
       "forcePublish": true,

@@ -1,6 +1,7 @@
 {
   "name": "@meghjs/data",
   "version": "0.7.2",
+  "private": true,
   "description": "TypeORM and Knex integration for Megh",
   "author": "Tareq Hossain",
   "license": "MIT",
