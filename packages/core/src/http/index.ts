@@ -11,3 +11,16 @@ export * from "./map-types";
 export { parseForm, OVERRIDABLE_METHODS } from "./method-override";
 export { Version } from "./versioning";
 export type { VersioningOptions } from "./versioning";
+export {
+  MeghSession,
+  MemorySessionStore,
+  RedisSessionStore,
+  currentSession,
+} from "./session";
+export type {
+  SessionOptions,
+  SessionCookieOptions,
+  SessionStore,
+  SessionData,
+  RedisSessionClient,
+} from "./session";

@@ -14,6 +14,7 @@ export const REQUEST_BODY_FILE_KEY = Symbol("iparam:options");
 export const REQUEST_BODY_FILES_KEY = Symbol("iparam:options");
 export const REQUEST_USER_META_KEY = Symbol("iparam:options");
 export const REQUEST_HEADER_META_KEY = Symbol("iheader:options");
+export const REQUEST_SESSION_META_KEY = Symbol("isession:options");
 export const DATASOURCE_META_KEY = Symbol("idatasource:options");
 export const AUTHORIZATION_META_KEY = Symbol("idatasource:authorization");
 export const PUBLIC_META_KEY = Symbol("megh:public");

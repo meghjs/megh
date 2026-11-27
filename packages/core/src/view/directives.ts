@@ -61,12 +61,18 @@ export const builtinDirectives: ReadonlyMap<string, DirectiveHandler> = new Map<
       return `if (${ctx.expect(a, t)}) {`;
     },
     elseif: (a, ctx, t) => {
-      const f = ctx.peek(["if", "unless", "isset"], t);
+      const f = ctx.peek(
+        ["if", "unless", "isset", "auth", "guest", "can", "cannot"],
+        t,
+      );
       if (f.hasElse) throw ctx.error("@elseif after @else", t);
       return `} else if (${ctx.expect(a, t)}) {`;
     },
     else: (a, ctx, t) => {
-      const f = ctx.peek(["if", "unless", "isset"], t);
+      const f = ctx.peek(
+        ["if", "unless", "isset", "auth", "guest", "can", "cannot"],
+        t,
+      );
       if (f.hasElse) throw ctx.error("Duplicate @else", t);
       f.hasElse = true;
       return "} else {";
@@ -90,6 +96,60 @@ export const builtinDirectives: ReadonlyMap<string, DirectiveHandler> = new Map<
     endisset: (a, ctx, t) => {
       ctx.close(["isset"], t);
       return "}";
+    },
+
+    // ---------- authentication ----------
+    // @auth ... @else ... @endauth: the user `useAuthentication()` resolved
+    // for this request, whatever the view data holds.
+    auth: (a, ctx, t) => {
+      if (a !== null) throw ctx.error("@auth takes no arguments", t);
+      ctx.open(t);
+      return "if (__rt.authenticated()) {";
+    },
+    endauth: (a, ctx, t) => {
+      ctx.close(["auth"], t);
+      return "}";
+    },
+    guest: (a, ctx, t) => {
+      if (a !== null) throw ctx.error("@guest takes no arguments", t);
+      ctx.open(t);
+      return "if (!__rt.authenticated()) {";
+    },
+    endguest: (a, ctx, t) => {
+      ctx.close(["guest"], t);
+      return "}";
+    },
+
+    // ---------- gates ----------
+    // @can('edit-post', post) ... @else ... @endcan, with gates from app.defineGate().
+    can: (a, ctx, t) => {
+      ctx.open(t);
+      return `if (__rt.can(${ctx.expect(a, t)})) {`;
+    },
+    endcan: (a, ctx, t) => {
+      ctx.close(["can"], t);
+      return "}";
+    },
+    cannot: (a, ctx, t) => {
+      ctx.open(t);
+      return `if (!__rt.can(${ctx.expect(a, t)})) {`;
+    },
+    endcannot: (a, ctx, t) => {
+      ctx.close(["cannot"], t);
+      return "}";
+    },
+
+    // ---------- session ----------
+    // @session('status') <p>{{ value }}</p> @endsession: only when the
+    // session (flashed values included) holds the key.
+    session: (a, ctx, t) => {
+      const v = ctx.id();
+      ctx.open(t);
+      return `{ const ${v} = __rt.sessionValue(${ctx.expect(a, t)}); if (${v} != null) { const value = ${v};`;
+    },
+    endsession: (a, ctx, t) => {
+      ctx.close(["session"], t);
+      return "}}";
     },
 
     // ---------- loops ----------

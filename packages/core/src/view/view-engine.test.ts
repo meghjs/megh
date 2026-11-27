@@ -8,6 +8,8 @@ import {
   ViewEngine,
   compileTemplate,
 } from "./index";
+import { requestContext } from "../observability/request-context";
+import { MeghSession, SESSION_CONTEXT_KEY } from "../http/session";
 
 const root = path.join(__dirname, "__fixtures__", "views");
 const engine = new ViewEngine({ root, cache: true }).share("appName", "Megh");
@@ -232,5 +234,34 @@ describe("ViewEngine", () => {
     } finally {
       fs.rmSync(dir, { recursive: true, force: true });
     }
+  });
+});
+
+describe("@auth, @guest and @session", () => {
+  const tpl = "@auth in @else out @endauth|@guest g @endguest";
+
+  it("follow the request's authenticated user, not the view data", () => {
+    expect(r(tpl, { user: { id: 1 } }).replace(/\s+/g, " ")).toBe(" out | g ");
+    const html = requestContext.run(() => r(tpl), { user: { id: 1 } });
+    expect(html.replace(/\s+/g, " ")).toBe(" in |");
+  });
+
+  it("@session prints a session value as `value`, escaped", () => {
+    const session = new MeghSession(null, null).set("status", "<b>ok</b>");
+    const html = requestContext.run(
+      () =>
+        r(
+          "@session('status')[{{ value }}]@endsession @session('none')x @endsession",
+        ),
+      { values: [[SESSION_CONTEXT_KEY, session]] },
+    );
+    expect(html.trim()).toBe("[&lt;b&gt;ok&lt;/b&gt;]");
+    expect(r("@session('status')x @endsession")).toBe("");
+  });
+
+  it("reject arguments and unbalanced blocks", () => {
+    expect(() => r("@auth('admin') x @endauth")).toThrow(/takes no arguments/);
+    expect(() => r("@guest x @endauth")).toThrow(TemplateError);
+    expect(() => r("@session x @endsession")).toThrow(TemplateError);
   });
 });

@@ -37,6 +37,13 @@ import {
   type UseAuthorizationOptions,
 } from "../http/middleware";
 import { installMethodOverride } from "../http/method-override";
+import {
+  installSession,
+  loginRedirectFilter,
+  type SessionOptions,
+  type SessionStore,
+} from "../http/session";
+import { defineGate, type GateCheck } from "../security/gate";
 import { MeghScheduler } from "../scheduler";
 import { isScheduledTask } from "../scheduler/schedule-registry";
 import { isApiController } from "../common/container";
@@ -137,6 +144,9 @@ export class MeghApplication implements IMeghApplication {
   private usesSecurityHeaders = false;
   private usesCompression = false;
   private usesMethodOverride = false;
+  /** The session store Megh created, closed on shutdown. */
+  private ownedSessionStore: SessionStore | null = null;
+  private usesSession = false;
   private envSchemas: Constructor<object>[] = [];
   private rateLimitOptions: RateLimitOptions | undefined;
   /** The rate limit store Megh created, closed on shutdown. */
@@ -652,6 +662,51 @@ export class MeghApplication implements IMeghApplication {
    * `application/x-www-form-urlencoded` bodies for `@Body()`, unless a parser
    * for that type is already registered.
    */
+  /**
+   * Cookie sessions for server-rendered apps. The cookie carries only a
+   * signed random ID; the data stays on the server, in memory by default.
+   * Inject the session with `@Session()`; views get it as `session`.
+   *
+   *   app.useSession({ secret: process.env.SESSION_SECRET })
+   *   app.useSession({ maxAge: "7 days", redis: new Redis() })
+   *
+   * Call `session.regenerate()` when a user logs in and `session.destroy()`
+   * when they log out.
+   */
+  useSession(options: SessionOptions = {}) {
+    this.assertNotStarted("useSession");
+    if (this.usesSession) {
+      throw new SystemUseError("[Megh] useSession() is already on.");
+    }
+    const { store, ownsStore } = installSession(this.app, options);
+    this.usesSession = true;
+    if (ownsStore) this.ownedSessionStore = store;
+    if (options.loginPath !== undefined) {
+      this.errorHandler.addFallbackFilter(
+        loginRedirectFilter(options.loginPath),
+      );
+    }
+    return this;
+  }
+
+  /**
+   * Define a gate: a named permission check for the authenticated user,
+   * used with `@can` / `@cannot` in views and `gate` in code. Guests are
+   * denied without calling it.
+   *
+   *   app.defineGate("edit-post", (user: User, post: Post) => user.id === post.authorId)
+   *
+   *   @can('edit-post', post) <a href="/posts/{{ post.id }}/edit">Edit</a> @endcan
+   *   gate.authorize("edit-post", post) // in a controller: 401 / 403 when denied
+   */
+  defineGate<TUser = any, TArgs extends unknown[] = any[]>(
+    name: string,
+    check: GateCheck<TUser, TArgs>,
+  ) {
+    defineGate(name, check as GateCheck);
+    return this;
+  }
+
   useMethodOverride() {
     this.assertNotStarted("useMethodOverride");
     if (this.usesMethodOverride) {
@@ -945,6 +1000,17 @@ export class MeghApplication implements IMeghApplication {
         internalLogger("app").error({ err }, "Closing the rate limiter failed");
       }
       this.ownedRateLimitStore = null;
+    }
+    if (this.ownedSessionStore) {
+      try {
+        await this.ownedSessionStore.close?.();
+      } catch (err) {
+        internalLogger("app").error(
+          { err },
+          "Closing the session store failed",
+        );
+      }
+      this.ownedSessionStore = null;
     }
     if (this.usesMail) {
       try {

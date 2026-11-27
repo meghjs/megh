@@ -1,4 +1,7 @@
 import { TemplateError } from "./errors";
+import { requestContext } from "../observability/request-context";
+import { currentSession } from "../http/session";
+import { gate } from "../security/gate";
 
 /** Marks a string as already-safe HTML so `{{ }}` does not escape it again. */
 export class HtmlString {
@@ -71,6 +74,21 @@ export class RenderContext {
   readonly PARENT = PARENT;
 
   constructor(private readonly engine: TemplateRenderer) {}
+
+  /** `@auth` / `@guest`: is the request being rendered for a logged-in user? */
+  authenticated() {
+    return requestContext.user != null;
+  }
+
+  /** `@can` / `@cannot`: does the request's user pass the gate? */
+  can(name: string, ...args: unknown[]) {
+    return gate.allows(name, ...args);
+  }
+
+  /** `@session('key')`: a value from the current request's session. */
+  sessionValue(key: string) {
+    return currentSession()?.get(key);
+  }
 
   // ----- output -----
   escape(value: unknown) {
